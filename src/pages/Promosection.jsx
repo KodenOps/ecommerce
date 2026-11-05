@@ -34,7 +34,7 @@ const Promosection = () => {
 
         {/* product grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-10">
-          {Promo.map((item) => {
+          {products.map((item) => {
             const discount = Math.round(((item.oldprice - item.price) / item.oldprice) * 100);
             return (
               <Link
