@@ -2,97 +2,198 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bubble-pink: #ff9aa2;
-  --bloom-rose: #ff6b8b;
-  --peach: #ffd6a5;
-  --grape: #b58cff;
-  --mint: #9fffb7;
-  --sunny: #ffd166;
-  --deep: #2f2f45;
-  --blush-bg: #fff5f5;
-  --cream: #fffaf5;
-  --text-dark: #2b1a2e;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: var(--font-poppins), sans-serif;
-}
-
-h1, h2, h3, h4, .font-serif {
-  font-family: var(--font-playfair), serif;
-}
-
+/* ---------------------------------------------------------------
+   Bloom & Glow — theme tokens
+   Light: warm blush paper, ink-plum type, rose accent.
+   Dark:  deep plum canvas, luminous rose/violet accents.
+   Every colour is an RGB triplet so Tailwind can apply opacity.
+----------------------------------------------------------------*/
 @layer base {
-  body {
-    background: linear-gradient(180deg, #fffafa 0%, #fff0f5 100%);
+  :root {
+    --canvas: 253 247 246;
+    --canvas-soft: 250 237 238;
+    --surface: 255 255 255;
+    --surface-2: 251 241 243;
+    --line: 239 223 226;
+    --line-strong: 226 205 210;
+    --ink: 42 27 44;
+    --ink-soft: 84 64 90;
+    --muted: 141 123 146;
+    --accent: 217 58 99;
+    --accent-hover: 191 45 83;
+    --accent-soft: 255 228 236;
+    --accent-ink: 255 255 255;
+    --violet: 143 91 214;
+    --violet-soft: 242 233 253;
+    --gold: 207 148 64;
+    --shadow-color: 66 28 58;
+    --grain-opacity: 0.035;
   }
+
+  .dark {
+    --canvas: 18 12 21;
+    --canvas-soft: 24 15 28;
+    --surface: 28 18 32;
+    --surface-2: 36 23 40;
+    --line: 53 35 60;
+    --line-strong: 70 48 78;
+    --ink: 247 236 249;
+    --ink-soft: 211 192 217;
+    --muted: 166 143 169;
+    --accent: 255 126 164;
+    --accent-hover: 255 153 182;
+    --accent-soft: 62 32 45;
+    --accent-ink: 40 13 24;
+    --violet: 195 155 255;
+    --violet-soft: 45 31 62;
+    --gold: 240 191 120;
+    --shadow-color: 0 0 0;
+    --grain-opacity: 0.06;
+  }
+
+  * {
+    border-color: rgb(var(--line));
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: rgb(var(--canvas));
+    color: rgb(var(--ink));
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
+
+  h1, h2, h3, h4, h5, .font-display {
+    font-family: var(--font-playfair), Georgia, serif;
+  }
+
+  ::selection {
+    background-color: rgb(var(--accent) / 0.22);
+    color: rgb(var(--ink));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: rgb(var(--canvas-soft)); }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--line-strong));
+    border-radius: 999px;
+    border: 2px solid rgb(var(--canvas-soft));
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--accent) / 0.7); }
 }
 
-@layer utilities {
-  .bloom-gradient-text {
-    background: linear-gradient(120deg, #ff6b8b 0%, #ff9aa2 50%, #b58cff 100%);
+/* ---------------------------------------------------------------
+   UI primitives — shared across every page
+----------------------------------------------------------------*/
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-10;
+  }
+
+  .section {
+    @apply py-10 sm:py-12 lg:py-14;
+  }
+
+  .card {
+    @apply rounded-3xl border border-line bg-surface shadow-soft;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-1.5 hover:border-line-strong hover:shadow-lift;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply bg-accent text-accent-ink shadow-glow hover:bg-accent-hover active:scale-[0.98];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply border border-line bg-surface/80 text-ink hover:border-line-strong hover:bg-surface-2 active:scale-[0.98];
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-ink-soft transition-colors duration-200 hover:text-accent;
+  }
+
+  .btn-icon {
+    @apply inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface/80 text-ink-soft transition-all duration-200 hover:border-accent/50 hover:text-accent;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-surface/70 px-4 py-2 text-xs font-semibold tracking-wide text-ink-soft transition-all duration-200 hover:border-accent/40 hover:text-accent;
+  }
+
+  .chip-active {
+    @apply border-accent bg-accent text-accent-ink shadow-glow hover:text-accent-ink;
+  }
+
+  .field {
+    @apply w-full rounded-2xl border border-line bg-surface/80 px-4 py-3 text-sm text-ink outline-none transition-shadow duration-200 placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-[rgb(var(--accent)/0.15)];
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.3em] text-accent;
+  }
+
+  .label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted;
+  }
+
+  .gradient-text {
+    background-image: linear-gradient(115deg, rgb(var(--accent)) 0%, rgb(var(--violet)) 58%, rgb(var(--gold)) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
   }
 
-  .glow-accent {
-    box-shadow: 0 0 18px -2px rgba(255, 107, 139, 0.35), 0 0 40px -6px rgba(255, 107, 139, 0.15);
+  .glass {
+    @apply border border-line/70 bg-surface/75 backdrop-blur-xl backdrop-saturate-150;
   }
 
-  .soft-shadow {
-    box-shadow: 0 8px 24px -8px rgba(47, 47, 69, 0.12);
+  .divider {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-line to-transparent;
   }
 
-  .petal-border {
-    border: 2px solid rgba(255, 107, 139, 0.25);
-    border-radius: 999px;
+  .link-underline {
+    @apply relative inline-flex text-ink-soft transition-colors hover:text-accent;
   }
 
-  .petal-card {
-    @apply relative overflow-hidden rounded-[28px] bg-white/90 backdrop-blur-sm border border-white/40 soft-shadow transition-all duration-300;
+  .stat-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3 py-1.5 text-xs font-medium text-ink-soft;
   }
-
-  .petal-card * {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  /* playful blob shapes as decorative backgrounds */
-  .blob-1 { position: absolute; width: 220px; height: 220px; background: radial-gradient(circle, rgba(255,154,162,0.45), rgba(255,107,139,0.05)); border-radius: 50%; filter: blur(30px); top: -60px; left: -60px; }
-  .blob-2 { position: absolute; width: 280px; height: 280px; background: radial-gradient(circle, rgba(181,140,255,0.35), rgba(255,107,139,0.05)); border-radius: 50%; filter: blur(40px); bottom: -90px; right: -90px; }
-  .blob-3 { position: absolute; width: 180px; height: 180px; background: radial-gradient(circle, rgba(255,214,165,0.5), rgba(255,209,102,0.1)); border-radius: 50%; filter: blur(24px); top: 50%; left: 60%; transform: translate(-50%, -50%); }
 }
 
-/* Playful hover lifts */
-.card-lift {
-  @apply hover:-translate-y-2 hover:shadow-2xl hover:shadow-rose-200/50;
+/* ---------------------------------------------------------------
+   Decorative helpers
+----------------------------------------------------------------*/
+.aurora {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  pointer-events: none;
+  opacity: 0.55;
 }
 
-/* custom scroll */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #fff0f5; }
-::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#ff6b8b,#b58cff); border-radius: 999px; }
+.dark .aurora { opacity: 0.38; }
 
-/* fun little sparkle pseudo-elements on some buttons */
-.sparkly-btn::after {
-  content: "✨";
-  margin-left: 8px;
-  font-size: 14px;
-  animation: twinkle 1.6s ease-in-out infinite;
+.dot-grid {
+  background-image: radial-gradient(rgb(var(--line-strong)) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at center, #000 25%, transparent 72%);
 }
-
-@keyframes twinkle {
-  0%, 100% { opacity: 0.4; transform: scale(0.8); }
-  50% { opacity: 1; transform: scale(1.15); }
-}
-
-/* ribbon badges */
-.ribbon {
-  @apply absolute -top-2 -right-2 bg-rose-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg;
-}
-

@@ -20,7 +20,7 @@ const Promo = [
       'A tinted lip oil that behaves like a sweet secret — gloss, color, and a hint of peachy blush in one swipe. Comfortable, non-sticky, and basically instant grin material.',
     category: 'Lips & Blush',
     image:
-      'https://images.unsplash.com/photo-1632253327116-5c684c48b66b?w=768&q=80',
+      'https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=768&q=80',
     rating: { rate: 4.7, count: 940 },
   },
   {
@@ -32,7 +32,7 @@ const Promo = [
       'A dreamy body fragrance mist with rose, vanilla, and a whisper of musk. Spritz on skin, clothes, or your pillow for a soft afterglow that lasts all evening.',
     category: 'Mists & Toners',
     image:
-      'https://images.unsplash.com/photo-1596489397631-4b6691d132cf?w=768&q=80',
+      'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=768&q=80',
     rating: { rate: 4.6, count: 720 },
   },
   {
@@ -56,7 +56,7 @@ const Promo = [
       'A shimmering dry body oil with golden mica, jojoba, and a warm amber hint. For when your skin wants to catch the light just a little bit more than usual.',
     category: 'Body Glow',
     image:
-      'https://images.unsplash.com/photo-1570186616344-76b7b1e5a7a5?w=768&q=80',
+      'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=768&q=80',
     rating: { rate: 4.7, count: 864 },
   },
   {
@@ -68,7 +68,7 @@ const Promo = [
       'A cozy candle in notes of rose, cream, and soft amber. Not too loud, not too shy — just the right amount of romantic for a slow night in with good vibes.',
     category: 'Scented Candles',
     image:
-      'https://images.unsplash.com/photo-1603006905003-be4755796b17?w=768&q=80',
+      'https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=768&q=80',
     rating: { rate: 4.8, count: 1050 },
   },
   {
@@ -80,7 +80,7 @@ const Promo = [
       'Three dreamy tints in one little kit: berry, peach, and rose. Stackable, swipeable, perfect for experimenting with your smile of the day.',
     category: 'Lips & Blush',
     image:
-      'https://images.unsplash.com/photo-1586495777744-4413f8103db4?w=768&q=80',
+      'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=768&q=80',
     rating: { rate: 4.6, count: 680 },
   },
   {
@@ -128,7 +128,7 @@ const Promo = [
       'A luxe moisture cream that feels like a soft raincloud landing on your face. Squalane, oat, and a little blur-magic for skin that wants to be calm and glowy.',
     category: 'Skincare',
     image:
-      'https://images.unsplash.com/photo-1570186616344-76b7b1e5a7a5?w=768&q=80',
+      'https://images.unsplash.com/photo-1620916297397-a4a5402a3c6c?w=768&q=80',
     rating: { rate: 4.7, count: 990 },
   },
   {

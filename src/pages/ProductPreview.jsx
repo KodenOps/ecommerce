@@ -1,172 +1,259 @@
-import React from "react";
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
-import Image from "next/image";
-import { useSearchParams } from "next/navigation";
-import { BsStars, BsHeart, BsShare } from "react-icons/bs";
-import { GiDaisy } from "react-icons/gi";
-import { getProductById } from "@/data/products";
+"use client";
 
-export default function ProductPreview() {
-  const searchParams = useSearchParams();
-  const idRaw = searchParams.get("id");
-  const id = idRaw != null ? Number(idRaw) : NaN;
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/router";
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiHeart,
+  FiMinus,
+  FiPlus,
+  FiShare2,
+  FiShield,
+  FiShoppingBag,
+  FiStar,
+  FiTruck,
+} from "react-icons/fi";
+import Layout from "@/components/Layout";
+import ProductCard from "@/components/ProductCard";
+import { getProductById, products } from "@/data/products";
+import { useStore } from "@/store/store";
+
+const money = (value) => `$${Number(value).toFixed(2).replace(/\.00$/, "")}`;
+
+const DETAILS = [
+  { label: "Formula", value: "Clean & cruelty-free" },
+  { label: "Scent family", value: "Floral · soft vanilla" },
+  { label: "Skin type", value: "All glow-levels welcome" },
+  { label: "Finish", value: "Luminous, never greasy" },
+];
+
+const ProductPreview = () => {
+  const router = useRouter();
+  const { addToCart, toggleFavorite, isFavorite } = useStore();
+  const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
+
+  const idRaw = router.query?.id;
+  const id = idRaw != null ? Number(Array.isArray(idRaw) ? idRaw[0] : idRaw) : NaN;
   const product = Number.isFinite(id) ? getProductById(id) : null;
 
-  const item = product ?? {};
+  if (!product) {
+    return (
+      <Layout>
+        <div className="card flex flex-col items-center gap-4 px-6 py-20 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <FiShoppingBag size={26} />
+          </span>
+          <div>
+            <h1 className="font-display text-2xl text-ink">This ritual has wandered off</h1>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
+              The piece you&apos;re looking for isn&apos;t here — but the shelf is full of good
+              company.
+            </p>
+          </div>
+          <Link href="/Shop" className="btn-primary">
+            Browse the shop
+          </Link>
+        </div>
+      </Layout>
+    );
+  }
 
-  const discount = item.oldprice
-    ? Math.round(((item.oldprice - item.price) / item.oldprice) * 100)
+  const discount = product.oldprice
+    ? Math.round(((product.oldprice - product.price) / product.oldprice) * 100)
     : 0;
+  const saved = isFavorite(product.id);
+  const related = products.filter((item) => item.id !== product.id).slice(0, 4);
 
-  const hasProduct = !!product;
+  const handleAdd = () => {
+    addToCart(product.id, quantity);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1800);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-rose-50/60 to-transparent">
-      <Navbar />
+    <Layout>
+      <div className="flex flex-col gap-8">
+        <Link href="/Shop" className="btn-ghost self-start px-0 text-xs">
+          <FiArrowLeft size={13} /> Back to the shop
+        </Link>
 
-      <div className="max-w-6xl mx-auto px-4 md:px-[70px] py-8 md:py-12 relative z-10">
-        {/* playful back link */}
-        <a
-          href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-rose-500 font-medium hover:text-rose-700 transition-colors mb-6 group"
-        >
-          <span className="group-hover:-translate-x-1 transition-transform inline-block">
-            ←
-          </span>
-          Back to glow
-        </a>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-start">
-          {/* visual side */}
-          <div className="relative">
-            {/* playful blobs */}
-            <div className="blob-1 opacity-80" />
-            <div className="blob-3 opacity-80" />
-
-            <div className="relative overflow-hidden rounded-[32px] bg-gradient-to-br from-rose-100 via-amber-50 to-purple-100 aspect-square max-w-[520px] mx-auto shadow-2xl border border-white/40">
-              {hasProduct && item.image ? (
-                <Image
-                  src={item.image}
-                  alt={item.title || "glow ritual"}
-                  fill
-                  className="w-full h-full object-cover"
-                  sizes="(max-width: 768px) 100vw, 520px"
-                  priority
-                  style={{ position: "absolute", inset: 0 }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-6xl text-rose-400">
-                  ✨
-                </div>
+        <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
+          <div className="flex flex-col gap-3">
+            <div className="relative aspect-square overflow-hidden rounded-4xl border border-line bg-gradient-to-br from-accent-soft via-surface-2 to-violet-soft shadow-card">
+              <Image
+                src={product.image}
+                alt={product.title}
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 560px"
+                className="object-cover"
+              />
+              {discount > 0 && (
+                <span className="absolute left-4 top-4 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-ink shadow-glow">
+                  −{discount}% today
+                </span>
               )}
-              {/* playful overlay badge */}
-              <div className="absolute top-4 left-4 z-10 bg-gradient-to-r from-rose-500 to-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
-                {              (product?.oldprice != null) ? `−${discount}%` : "✨ Best"}
-              </div>
-              {/* playful ripple decoration */}
-              <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/30 backdrop-blur-sm rounded-full blur-xl" />
+              <button
+                type="button"
+                onClick={() => toggleFavorite(product.id)}
+                aria-pressed={saved}
+                aria-label={saved ? "Remove from saved" : "Save for later"}
+                className={`absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur transition-all ${
+                  saved
+                    ? "border-accent bg-accent text-accent-ink"
+                    : "border-line/70 bg-surface/85 text-ink-soft hover:text-accent"
+                }`}
+              >
+                <FiHeart size={16} fill={saved ? "currentColor" : "none"} />
+              </button>
             </div>
 
-            {/* playful quick actions row */}
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <button className="petal-card px-5 py-3 flex items-center gap-2 text-rose-600 bg-white shadow-md hover:shadow-xl transition-all">
-                <BsHeart size={18} />
-                <span className="text-sm font-medium">Save</span>
-              </button>
-              <button className="petal-card px-5 py-3 flex items-center gap-2 text-rose-600 bg-white shadow-md hover:shadow-xl transition-all">
-                <BsShare size={18} />
-                <span className="text-sm font-medium">Share</span>
-              </button>
+            <div className="grid grid-cols-3 gap-3">
+              {[0, 1, 2].map((offset) => {
+                const image = products[(product.id + offset) % products.length]?.image;
+                return (
+                  <div
+                    key={offset}
+                    className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2"
+                  >
+                    {image && (
+                      <Image src={image} alt="" fill sizes="120px" className="object-cover opacity-90" />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* details side */}
-          <div className="flex flex-col gap-5">
-            {/* playful breadcrumb tag */}
-            <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-rose-500 font-medium">
-              <GiDaisy size={14} />
-              {product ? (item.category || "Ritual") : "Ritual"}
+          <div className="flex flex-col gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="eyebrow">{product.category}</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-gold">
+                  <FiStar size={11} fill="currentColor" />
+                  {product.rating?.rate?.toFixed(1) ?? "4.8"}
+                  <span className="text-muted">({product.rating?.count ?? 0})</span>
+                </span>
+              </div>
+              <h1 className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
+                {product.title}
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-ink-soft sm:text-[15px]">
+                {product.description}
+              </p>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-bold text-[#2b1a2e] leading-tight">
-              {product ? (item.title || "Glow Ritual") : "Glow Ritual"}
-            </h1>
-
-            {/* playful rating row */}              {product && (
-                <div className="flex items-center gap-3 text-sm">
-                <div className="inline-flex items-center gap-1 text-amber-400">
-                  <BsStars size={18} fill="currentColor" />
-                  <span className="font-semibold text-[#2b1a2e]">
-                    {item.rating?.rate ?? 4.8}
-                  </span>
-                  <span className="text-[#2b1a2e]/60">
-                    ({item.rating?.count ?? 800} glows)
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* playful price card */}
-            <div className="petal-card bg-white p-5 flex items-center justify-between">
+            <div className="card flex flex-wrap items-end justify-between gap-4 p-5">
               <div>
-                <span className="block text-sm text-[#2b1a2e]/60 uppercase tracking-wide">
-                  Total
-                </span>
-                <div className="flex items-baseline gap-3 mt-1">
-                  <span className="text-3xl font-bold text-rose-600">
-                    {product && item.price != null ? `$${item.price}` : "—"}
-                  </span>
-                  {product?.oldprice != null && (
-                    <span className="text-lg text-[#2b1a2e]/50 line-through">
-                      ${item.oldprice}
+                <p className="label">Price</p>
+                <div className="mt-1 flex items-baseline gap-3">
+                  <span className="font-display text-3xl text-ink">{money(product.price)}</span>
+                  {product.oldprice && (
+                    <span className="text-sm text-muted line-through">
+                      {money(product.oldprice)}
+                    </span>
+                  )}
+                  {discount > 0 && (
+                    <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
+                      Save {discount}%
                     </span>
                   )}
                 </div>
               </div>
-              <button className="px-6 py-3 rounded-full bg-gradient-to-r from-rose-500 to-purple-500 text-white font-semibold shadow-lg glow-accent sparkly-btn transition-all hover:scale-[1.03] active:scale-95">
-                Add to Glow Bag
+
+              <div className="flex items-center gap-2 rounded-full border border-line bg-surface-2 p-1">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
+                  aria-label="Decrease quantity"
+                >
+                  <FiMinus size={13} />
+                </button>
+                <span className="w-6 text-center text-sm font-semibold tabular-nums">{quantity}</span>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.min(20, q + 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
+                  aria-label="Increase quantity"
+                >
+                  <FiPlus size={13} />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={handleAdd} className="btn-primary flex-1">
+                {added ? <FiCheck size={15} /> : <FiShoppingBag size={15} />}
+                {added ? "Added to bag" : `Add to bag · ${money(product.price * quantity)}`}
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleFavorite(product.id)}
+                className="btn-secondary"
+                aria-pressed={saved}
+              >
+                <FiHeart size={15} fill={saved ? "currentColor" : "none"} />
+                {saved ? "Saved" : "Save"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    navigator.share({ title: product.title, url: window.location.href }).catch(() => {});
+                  }
+                }}
+                className="btn-secondary px-4"
+                aria-label="Share this ritual"
+              >
+                <FiShare2 size={15} />
               </button>
             </div>
 
-            {/* playful description */}
-            <p className="text-[#2b1a2e]/80 leading-relaxed text-base">
-              {product
-                ? item.description ||
-                  "A little luxury for your daily ritual — luminous, playful, and made to make you feel gorgeous."
-                : "Pick a ritual from the collection and this page will fill with all the glowing details."}
-            </p>
-
-            {/* playful detail rails */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              {[
-                { label: "Reformulation", value: "Clean & cruelty-free" },
-                { label: "Scent family", value: "Floral · soft vanilla" },
-                { label: "Skin type", value: "All glow-levels welcome" },
-                { label: "Vibe check", value: "Fresh, dreamy, sparkly" },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="petal-card bg-white p-3 flex flex-col gap-0.5"
-                >
-                  <span className="text-[#2b1a2e]/50 text-[10px] uppercase tracking-wider">
-                    {row.label}
-                  </span>
-                  <span className="font-medium text-[#2b1a2e]">{row.value}</span>
+            <div className="grid grid-cols-2 gap-3">
+              {DETAILS.map((detail) => (
+                <div key={detail.label} className="rounded-2xl border border-line bg-surface-2/60 p-3.5">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-muted">{detail.label}</p>
+                  <p className="mt-0.5 text-sm font-medium text-ink">{detail.value}</p>
                 </div>
               ))}
             </div>
 
-            {/* playful cta strip */}
-            <div className="mt-2 flex items-center gap-2 text-sm text-rose-500">
-              <span className="inline-block w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-              <span>Free glowy samples with every order</span>
+            <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface-2/50 p-4 text-xs text-ink-soft">
+              <span className="flex items-center gap-2">
+                <FiTruck size={13} className="text-accent" /> Free shipping over $75 · tracked
+                delivery
+              </span>
+              <span className="flex items-center gap-2">
+                <FiShield size={13} className="text-accent" /> 30-day returns, even if opened
+              </span>
             </div>
           </div>
         </div>
-      </div>
 
-      <Footer />
-    </div>
+        <section>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <span className="eyebrow">Pairs nicely</span>
+              <h2 className="mt-1 font-display text-2xl text-ink">Complete the ritual</h2>
+            </div>
+            <Link href="/Shop" className="btn-ghost text-xs">
+              All rituals
+            </Link>
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} compact />
+            ))}
+          </div>
+        </section>
+      </div>
+    </Layout>
   );
-}
+};
+
+export default ProductPreview;
