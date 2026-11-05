@@ -12,8 +12,8 @@ const poppins = Poppins({
 });
 
 export const metadata = {
-	title: "Bloom & Glow — Beauty Bar",
-	description: "Luminous skincare, radiant moods, little luxuries for your daily ritual.",
+	title: "Bloom & Wardrobe",
+	description: "A considered collection of daywear, eveningwear, and quiet luxury for the moments that matter.",
 };
 
 export default function RootLayout({ children }) {
