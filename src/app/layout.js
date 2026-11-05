@@ -1,14 +1,19 @@
 import "./globals.css";
-import { Poppins } from "next/font/google";
+import { Playfair_Display, Poppins } from "next/font/google";
 import Head from "next/head";
-const font = Poppins({
+const playfair = Playfair_Display({
 	subsets: ["latin"],
-	weight: ["200", "300", "400", "600", "800"],
+	weight: ["400", "600", "700"],
+	style: ["normal", "italic"],
+});
+const poppins = Poppins({
+	subsets: ["latin"],
+	weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata = {
-	title: "SuperDiva V.2",
-	description: "The smart way to shop.",
+	title: "Bloom & Glow — Beauty Bar",
+	description: "Luminous skincare, radiant moods, little luxuries for your daily ritual.",
 };
 
 export default function RootLayout({ children }) {
@@ -16,8 +21,10 @@ export default function RootLayout({ children }) {
 		<html lang="en">
 			<Head>
 				<link rel="shortcut icon" href="/favicon.ico" />
+				<link rel="preconnect" href="https://fonts.googleapis.com" />
+				<link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 			</Head>
-			<body className={font.className}>{children}</body>
+			<body className={`${playfair.className} ${poppins.className}`}>{children}</body>
 		</html>
 	);
 }

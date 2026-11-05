@@ -1,24 +1,27 @@
 "use client";
-import TopProduct from "@/pages/TopProduct";
-import Hero from "../pages/Hero";
 import React, { useState } from "react";
-import Promosection from "@/pages/Promosection";
-import Categories from "@/pages/Categories";
+import Hero from "../pages/Hero";
+import Categories from "../pages/Categories";
+import TopProduct from "../pages/TopProduct";
+import Promosection from "../pages/Promosection";
+import ProductPreview from "../pages/ProductPreview";
 import Footer from "@/components/Footer";
-import ProductPreview from "@/pages/ProductPreview";
 
+/*
+  Bloom & Glow — beauty care storefront
+  Flow: Hero → Shop by Ritual → Bestsellers → Flash Glow Sale → (ProductPreview is separate page)
+*/
 export default function Home() {
-	const [previewItem, setpreviewItem] = useState([1, 2, 3]);
-	return (
-		<main className="">
-			<Hero />
-			<Categories />
-			<TopProduct />
-			<Promosection
-				setpreviewItems={setpreviewItem}
-				previewItems={previewItem}
-			/>
-			<Footer />
-		</main>
-	);
+  const [previewItem, setpreviewItem] = useState([1, 2, 3]);
+
+  return (
+    <main className="relative">
+      {/* Note: Hero re-renders Navbar for the hero panel so the hero panel reads as a standalone scene. */}
+      <Hero />
+      <Categories />
+      <TopProduct />
+      <Promosection />
+      <Footer />
+    </main>
+  );
 }
