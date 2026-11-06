@@ -112,7 +112,7 @@ export default function Orders() {
               <button type="button" onClick={load} className="btn-secondary" aria-label="Refresh orders">
                 <FiRefreshCw size={14} className={loading ? "animate-spin" : ""} />
               </button>
-              <Link href="/Shop" className="btn-secondary">
+              <Link href="/shop" className="btn-secondary">
                 Shop again
                 <FiArrowRight size={14} />
               </Link>
@@ -145,7 +145,7 @@ export default function Orders() {
                 moves.
               </p>
             </div>
-            <Link href="/Shop" className="btn-primary">
+            <Link href="/shop" className="btn-primary">
               Start with a bestseller
               <FiArrowRight size={15} />
             </Link>
@@ -214,7 +214,7 @@ export default function Orders() {
                   {order.items.map((item) => (
                     <li key={item.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                       <Link
-                        href={item.productId ? `/ProductPreview?id=${item.productId}` : "/Shop"}
+                        href={item.productId ? `/ProductPreview?id=${item.productId}` : "/shop"}
                         className="relative h-14 w-12 shrink-0 overflow-hidden rounded-xl border border-line bg-surface-2"
                       >
                         {item.image ? (
@@ -223,7 +223,7 @@ export default function Orders() {
                       </Link>
                       <div className="min-w-0 flex-1">
                         <Link
-                          href={item.productId ? `/ProductPreview?id=${item.productId}` : "/Shop"}
+                          href={item.productId ? `/ProductPreview?id=${item.productId}` : "/shop"}
                           className="block truncate text-sm font-medium text-ink hover:text-accent"
                         >
                           {item.title}

@@ -6,6 +6,7 @@ import {
   sameOrigin,
   sendJson,
 } from "@/lib/apiHelpers";
+import { sendOrderPlacedEmail } from "@/lib/mailer";
 import { ORDER_SELECT, toOrder } from "@/lib/productMapper";
 import { removeObject, uploadDataUrl } from "@/lib/supabase/storage";
 import { cleanMultiline, cleanText, normalizePhone } from "@/lib/validation";
@@ -95,5 +96,21 @@ export default async function handler(req, res) {
   }
 
   const order = toOrder({ ...data.order, order_items: data.items, order_events: [] });
+
+  try {
+    await sendOrderPlacedEmail({
+      order,
+      recipient: process.env.ADMIN_ORDER_EMAIL || "femifadiya.segun@gmail.com",
+      supabase,
+      receipt: {
+        path: data.order?.receipt_path,
+        name: data.order?.receipt_name,
+        mime: data.order?.receipt_mime,
+      },
+    });
+  } catch (error) {
+    console.error("[order-email] failed to send payment confirmation email", error);
+  }
+
   return sendJson(res, 201, { order });
 }

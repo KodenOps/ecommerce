@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { GiQueenCrown } from "react-icons/gi";
+import { lockBodyScroll } from "@/lib/bodyScroll";
 
 const MIN_VISIBLE_MS = 1200;
 const FADE_MS = 500;
@@ -17,6 +18,10 @@ const LoadingScreen = () => {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
+    if (hidden) {
+      return undefined;
+    }
+
     let alreadyBooted = false;
     try {
       alreadyBooted = window.sessionStorage.getItem(BOOTED_KEY) === "1";
@@ -57,17 +62,16 @@ const LoadingScreen = () => {
 
     const safety = window.setTimeout(dismiss, MAX_VISIBLE_MS);
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const unlock = lockBodyScroll();
 
     return () => {
       window.clearTimeout(dismissTimer);
       window.clearTimeout(fadeTimer);
       window.clearTimeout(safety);
       window.removeEventListener("load", schedule);
-      document.body.style.overflow = originalOverflow;
+      unlock();
     };
-  }, []);
+  }, [hidden]);
 
   if (hidden) return null;
 
@@ -93,7 +97,7 @@ const LoadingScreen = () => {
             Queen<span className="gradient-text">Fizzie</span>
           </p>
           <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.34em] text-accent">
-            Naija beauty, delivered
+            Skin Care, delivered
           </p>
         </div>
 

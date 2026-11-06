@@ -77,7 +77,7 @@ const Shop = () => {
         <PageHeader
           eyebrow="The shop"
           title="Every ritual, in one place"
-          description="Twelve original formulas across skincare, scent and body — blended for melanin-rich skin in Nigeria, ready to ship from Lagos."
+          description="Skincare, scent and body rituals blended for melanin-rich skin in Nigeria — ready to ship from Lagos."
           crumbs={[{ label: "Home", href: "/" }, { label: "Shop" }]}
         />
 

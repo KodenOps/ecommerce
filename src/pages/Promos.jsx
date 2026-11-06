@@ -6,8 +6,13 @@ import { FiArrowRight, FiCheck, FiCopy, FiTag } from "react-icons/fi";
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
+import { userPageProps } from "@/lib/routeGuards";
 import { useStore } from "@/store/store";
 import { formatNaira } from "@/lib/money";
+
+export async function getServerSideProps(ctx) {
+  return userPageProps(ctx, { fallback: "/Account" });
+}
 
 const Promos = () => {
   const { catalog } = useStore();
@@ -53,7 +58,7 @@ const Promos = () => {
           description="Everything currently reduced, in one place. Stock is limited to the sale window — restocks go back to full price."
           crumbs={[{ label: "Home", href: "/" }, { label: "Promos" }]}
           actions={
-            <Link href="/Shop" className="btn-secondary">
+            <Link href="/shop" className="btn-secondary">
               Shop everything
               <FiArrowRight size={14} />
             </Link>

@@ -173,7 +173,7 @@ export default function AdminNotifications() {
                 value={form.href}
                 onChange={(event) => setForm({ ...form, href: event.target.value })}
                 className="field mt-1.5"
-                placeholder="/Shop"
+                placeholder="/shop"
               />
             </div>
 

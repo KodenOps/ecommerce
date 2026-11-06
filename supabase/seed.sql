@@ -39,7 +39,29 @@ values
   ('queens-owambe-gift-box', 'Queen''s Owambe Gift Box', 'QF-012',
    'A curated mini haul in a reusable box: lip oil, body mist, shea balm and a candle trinket. Perfect for a bridal train, a best friend, or a well-deserved self-treat.',
    'Gifts & Sets', 53000, 78000, 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80', 25, 5, 'ACTIVE', true, 4.90, 2100)
-on conflict (slug) do nothing;
+on conflict (sku) do update set
+  slug = excluded.slug,
+  title = excluded.title,
+  description = excluded.description,
+  category = excluded.category,
+  price = excluded.price,
+  old_price = excluded.old_price,
+  image = excluded.image,
+  stock = excluded.stock,
+  low_stock_at = excluded.low_stock_at,
+  status = excluded.status,
+  featured = excluded.featured,
+  rating_rate = excluded.rating_rate,
+  rating_count = excluded.rating_count;
+
+insert into public.product_variants (product_id, value, label, price, stock, is_default)
+select p.id, 'default', 'Standard', p.price, p.stock, true
+from public.products p
+on conflict (product_id, value) do update set
+  label = excluded.label,
+  price = excluded.price,
+  stock = excluded.stock,
+  is_default = excluded.is_default;
 
 insert into public.promos (code, description, type, value, min_subtotal, max_uses, active)
 values

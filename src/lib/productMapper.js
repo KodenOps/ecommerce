@@ -1,22 +1,113 @@
 /** Supabase rows → the camelCase shape the storefront consumes. */
+function normalizeSizeOption(size, fallbackPrice = 0) {
+  if (!size || typeof size !== "object") return null;
+
+  const value = String(size.value ?? size.label ?? size.size ?? "default");
+  const label = String(size.label ?? size.value ?? size.size ?? value);
+  const price = Number(size.price ?? size.amount ?? fallbackPrice ?? 0) || fallbackPrice || 0;
+  const stock = Number(size.stock ?? 0) || 0;
+
+  if (!value || !label) return null;
+
+  return {
+    value,
+    label,
+    price,
+    stock,
+    isDefault: Boolean(size.is_default ?? size.isDefault),
+  };
+}
+
+function normalizeSizes(row) {
+  const rawSizes = Array.isArray(row?.sizes)
+    ? row.sizes
+    : Array.isArray(row?.product_variants)
+      ? row.product_variants
+      : Array.isArray(row?.size_options)
+        ? row.size_options
+        : Array.isArray(row?.variants)
+          ? row.variants
+          : [];
+
+  const fallbackPrice = Number(row?.price ?? row?.selling_price ?? 0) || 0;
+  const normalized = (rawSizes || [])
+    .map((size) => normalizeSizeOption(size, fallbackPrice))
+    .filter(Boolean);
+
+  if (normalized.length > 0) {
+    // The product price is the price the catalogue sorts and checks out at.
+    // Keep the matching variant first so the default option, the card price
+    // and the sort order all agree.
+    const priceIndex = fallbackPrice > 0
+      ? normalized.findIndex((size) => size.price === fallbackPrice)
+      : -1;
+    const defaultIndex = normalized.findIndex((size) => size.isDefault);
+    const firstIndex = priceIndex >= 0 ? priceIndex : defaultIndex >= 0 ? defaultIndex : 0;
+
+    if (firstIndex > 0) {
+      const [first] = normalized.splice(firstIndex, 1);
+      normalized.unshift(first);
+    }
+
+    return normalized;
+  }
+
+  if (fallbackPrice > 0 && (row?.title || row?.name)) {
+    return [{ value: "default", label: "Standard", price: fallbackPrice, stock: Number(row?.stock ?? 0) || 0 }];
+  }
+
+  return [];
+}
+
+function normalizeImageArray(row) {
+  const rawImages = [];
+
+  if (Array.isArray(row?.images)) {
+    rawImages.push(...row.images);
+  }
+  if (Array.isArray(row?.image_urls)) {
+    rawImages.push(...row.image_urls);
+  }
+  if (typeof row?.image === "string" && row.image.trim()) {
+    rawImages.push(row.image);
+  }
+  if (typeof row?.image_url === "string" && row.image_url.trim()) {
+    rawImages.push(row.image_url);
+  }
+
+  const cleaned = [...new Set(rawImages.map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 3);
+  return cleaned.length ? cleaned : [""];
+}
+
 export function toStoreProduct(row) {
   if (!row) return null;
+
+  const sizes = normalizeSizes(row);
+  const firstSize = sizes[0] || null;
+  const price = Number(row.price ?? row.selling_price ?? firstSize?.price ?? 0) || 0;
+  const compareAt = Number(row.old_price ?? row.compare_at ?? 0) || 0;
+  const oldprice = compareAt > price ? compareAt : null;
+  const images = normalizeImageArray(row);
+  const primaryImage = images[0] || "";
+
   return {
     id: row.id,
-    title: row.title,
-    price: row.price,
-    oldprice: row.old_price ?? null,
-    description: row.description,
+    title: row.title || row.name || "Untitled product",
+    price,
+    oldprice,
+    description: row.description || "",
     category: row.category,
-    image: row.image,
+    image: primaryImage,
+    images,
     rating: { rate: Number(row.rating_rate ?? 4.8), count: row.rating_count ?? 0 },
-    stock: row.stock ?? 0,
+    stock: row.stock ?? Number(row.unit ?? 0) ?? 0,
     lowStockAt: row.low_stock_at ?? 5,
-    sku: row.sku,
+    sku: row.sku || row.id,
     slug: row.slug,
     status: row.status,
     featured: Boolean(row.featured),
     createdAt: row.created_at,
+    sizes,
   };
 }
 

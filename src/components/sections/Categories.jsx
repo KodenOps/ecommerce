@@ -61,13 +61,13 @@ const TRUST_BADGES = [
 
 const Categories = () => {
   return (
-    <section id="rituals" className="section">
+    <section id="routines" className="section">
       <Titles
-        eyebrow="Shop by ritual"
+        eyebrow="Shop by Routines"
         title="Pick the mood, we'll bring the glow"
         subtext="Six small worlds of beauty — each one built around the moment you want to make for yourself, shipped from Lagos."
         action={
-          <Link href="/Shop" className="btn-secondary">
+          <Link href="/shop" className="btn-secondary">
             View everything
             <FiArrowUpRight size={14} />
           </Link>
@@ -80,7 +80,7 @@ const Categories = () => {
           return (
             <Link
               key={category.name}
-              href={`/Shop?category=${encodeURIComponent(category.name)}`}
+              href={`/shop?category=${encodeURIComponent(category.name)}`}
               className="card card-hover group relative overflow-hidden p-5"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${category.tint} opacity-0 transition-opacity duration-300 group-hover:opacity-100`} />

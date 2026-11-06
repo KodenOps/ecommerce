@@ -60,6 +60,7 @@ create table if not exists public.products (
   price        integer not null check (price >= 0),
   old_price    integer check (old_price is null or old_price >= 0),
   image        text not null default '',
+  images       text[] not null default '{}',
   stock        integer not null default 0 check (stock >= 0),
   low_stock_at integer not null default 5,
   status       text not null default 'ACTIVE' check (status in ('ACTIVE', 'DRAFT', 'ARCHIVED')),
@@ -67,7 +68,21 @@ create table if not exists public.products (
   rating_rate  numeric(3, 2) not null default 4.80,
   rating_count integer not null default 0,
   created_at   timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
+  updated_at   timestamptz not null default now(),
+  constraint products_images_limit check (cardinality(images) <= 3)
+);
+
+create table if not exists public.product_variants (
+  id          uuid primary key default gen_random_uuid(),
+  product_id  uuid not null references public.products (id) on delete cascade,
+  value       text not null default 'default',
+  label       text not null default 'Standard',
+  price       integer not null default 0 check (price >= 0),
+  stock       integer not null default 0 check (stock >= 0),
+  is_default  boolean not null default false,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (product_id, value)
 );
 
 create table if not exists public.promos (
@@ -174,10 +189,23 @@ create table if not exists public.promo_redemptions (
   created_at timestamptz not null default now()
 );
 
+alter table public.products add column if not exists images text[] not null default '{}';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'products_images_limit'
+  ) then
+    alter table public.products add constraint products_images_limit check (cardinality(images) <= 3);
+  end if;
+end $$;
+
 create index if not exists profiles_role_idx on public.profiles (role);
 create index if not exists addresses_user_idx on public.addresses (user_id);
 create index if not exists products_status_idx on public.products (status);
 create index if not exists products_category_idx on public.products (category);
+create index if not exists product_variants_product_idx on public.product_variants (product_id);
+create index if not exists product_variants_default_idx on public.product_variants (product_id, is_default);
 create index if not exists orders_user_idx on public.orders (user_id);
 create index if not exists orders_status_idx on public.orders (status);
 create index if not exists order_items_order_idx on public.order_items (order_id);
@@ -197,6 +225,10 @@ create trigger addresses_touch before update on public.addresses
 
 drop trigger if exists products_touch on public.products;
 create trigger products_touch before update on public.products
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists product_variants_touch on public.product_variants;
+create trigger product_variants_touch before update on public.product_variants
   for each row execute function public.touch_updated_at();
 
 drop trigger if exists promos_touch on public.promos;
@@ -267,6 +299,7 @@ grant execute on function public.phone_available(text) to anon, authenticated;
 alter table public.profiles enable row level security;
 alter table public.addresses enable row level security;
 alter table public.products enable row level security;
+alter table public.product_variants enable row level security;
 alter table public.promos enable row level security;
 alter table public.orders enable row level security;
 alter table public.order_items enable row level security;
@@ -342,6 +375,17 @@ create policy products_select on public.products
 
 drop policy if exists products_admin_write on public.products;
 create policy products_admin_write on public.products
+  for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- product variants: storefront reads all options, admins manage the variant list
+drop policy if exists product_variants_select on public.product_variants;
+create policy product_variants_select on public.product_variants
+  for select to anon, authenticated
+  using (true);
+
+drop policy if exists product_variants_admin_write on public.product_variants;
+create policy product_variants_admin_write on public.product_variants
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
@@ -885,6 +929,13 @@ grant execute on function public.admin_finances() to authenticated;
 -- ------------------------------------------------------------------ storage ---
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
+  'products', 'products', true, 5242880,
+  array['image/png', 'image/jpeg', 'image/webp']
+)
+on conflict (id) do update set public = true;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
   'avatars', 'avatars', true, 5242880,
   array['image/png', 'image/jpeg', 'image/webp']
 )
@@ -896,6 +947,27 @@ values (
   array['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
 )
 on conflict (id) do update set public = false;
+
+drop policy if exists products_public_read on storage.objects;
+create policy products_public_read on storage.objects
+  for select to anon, authenticated
+  using (bucket_id = 'products');
+
+drop policy if exists products_admin_write on storage.objects;
+create policy products_admin_write on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'products' and public.is_admin());
+
+drop policy if exists products_admin_update on storage.objects;
+create policy products_admin_update on storage.objects
+  for update to authenticated
+  using (bucket_id = 'products' and public.is_admin())
+  with check (bucket_id = 'products' and public.is_admin());
+
+drop policy if exists products_admin_delete on storage.objects;
+create policy products_admin_delete on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'products' and public.is_admin());
 
 drop policy if exists avatars_public_read on storage.objects;
 create policy avatars_public_read on storage.objects

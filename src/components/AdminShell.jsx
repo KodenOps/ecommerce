@@ -25,6 +25,7 @@ const LINKS = [
   { href: "/Admin/Dashboard", label: "Dashboard", icon: FiGrid },
   { href: "/Admin/Orders", label: "Orders", icon: FiPackage },
   { href: "/Admin/Products", label: "Products", icon: FiShoppingBag },
+  { href: "/Admin/ProductRepo", label: "Product Repo", icon: FiPackage },
   { href: "/Admin/Promos", label: "Promos", icon: FiTag },
   { href: "/Admin/Finances", label: "Finances", icon: FiTrendingUp },
   { href: "/Admin/Users", label: "Customers", icon: FiUsers },

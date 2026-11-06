@@ -1,7 +1,7 @@
 # QueenFizzie
 
 A full-stack beauty storefront for Nigerian skin — original skincare, body
-rituals, candles and gift sets, delivered nationwide from Lekki, Lagos.
+routines, candles and gift sets, delivered nationwide from Lekki, Lagos.
 
 The app is a Next.js 13 project (Pages Router for the shop, App Router entry for
 `/`) with **Supabase** as the entire backend: Auth, Postgres, Row Level Security

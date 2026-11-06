@@ -44,7 +44,7 @@ const Favorites = () => {
                 Tap the heart on any product and it will wait for you right here.
               </p>
             </div>
-            <Link href="/Shop" className="btn-primary">
+            <Link href="/shop" className="btn-primary">
               Find something to love
               <FiArrowRight size={15} />
             </Link>

@@ -154,54 +154,81 @@ export function StoreProvider({ children }) {
   );
 
   const addToCart = useCallback(
-    (productId, quantity = 1) => {
+    (productId, quantity = 1, variant = null) => {
       const product = getProduct(productId);
       if (!product) {
         notify("That product is still loading — try again in a moment.");
         return;
       }
-      if (product.stock <= 0) {
+
+      const variantKey = variant?.value ? String(variant.value) : "default";
+      const unitPrice = Number(variant?.price ?? product.price ?? 0);
+      const availableStock = Number(variant?.stock ?? product.stock ?? 0);
+
+      if (availableStock <= 0) {
         notify(`${product.title} is sold out.`);
         return;
       }
+
       setCart((current) => {
-        const existing = current.find((line) => line.id === product.id);
-        const nextQty = Math.min(
-          product.stock,
-          existing ? existing.qty + quantity : quantity
-        );
+        const key = `${String(product.id)}:${variantKey}`;
+        const existing = current.find((line) => line.key === key);
+        const nextQty = Math.min(availableStock, existing ? existing.qty + quantity : quantity);
+
         if (existing) {
           if (nextQty === existing.qty) {
-            notify(`Only ${product.stock} of ${product.title} left.`);
+            notify(`Only ${availableStock} of ${product.title}${variant?.label ? ` (${variant.label})` : ""} left.`);
             return current;
           }
           return current.map((line) =>
-            line.id === product.id ? { ...line, qty: nextQty } : line
+            line.key === key ? { ...line, qty: nextQty, price: unitPrice } : line
           );
         }
-        return [...current, { id: product.id, qty: nextQty }];
+
+        return [
+          ...current,
+          {
+            id: product.id,
+            key,
+            qty: nextQty,
+            price: unitPrice,
+            oldprice: product.oldprice ?? null,
+            variant: variant ? { value: variant.value, label: variant.label } : null,
+          },
+        ];
       });
-      notify(`${product.title} added to your bag`);
+      notify(`${product.title}${variant?.label ? ` (${variant.label})` : ""} added to your bag`);
     },
     [getProduct, notify]
   );
 
-  const removeFromCart = useCallback((productId) => {
-    setCart((current) => current.filter((line) => String(line.id) !== String(productId)));
+  const removeFromCart = useCallback((productId, variant = null) => {
+    setCart((current) => {
+      const key = variant ? `${String(productId)}:${String(variant.value || "default")}` : null;
+      return current.filter((line) => {
+        const sameProduct = String(line.id) === String(productId);
+        if (key) return line.key !== key;
+        return !sameProduct;
+      });
+    });
   }, []);
 
-  const setQuantity = useCallback((productId, quantity) => {
+  const setQuantity = useCallback((productId, quantity, variant = null) => {
     setCart((current) => {
+      const key = variant ? `${String(productId)}:${String(variant.value || "default")}` : null;
+
       if (quantity <= 0) {
-        return current.filter((line) => String(line.id) !== String(productId));
+        return current.filter((line) => (key ? line.key !== key : String(line.id) !== String(productId)));
       }
+
       const product = catalog.find((item) => String(item.id) === String(productId));
-      const cap = product?.stock ? Math.min(20, product.stock) : 20;
-      return current.map((line) =>
-        String(line.id) === String(productId)
-          ? { ...line, qty: Math.min(quantity, cap) }
-          : line
-      );
+      const variantStock = variant?.stock ?? product?.stock ?? 20;
+      const cap = product?.stock ? Math.min(20, variantStock) : 20;
+
+      return current.map((line) => {
+        const matchesTarget = key ? line.key === key : String(line.id) === String(productId);
+        return matchesTarget ? { ...line, qty: Math.min(quantity, cap) } : line;
+      });
     });
   }, [catalog]);
 
@@ -280,7 +307,24 @@ export function StoreProvider({ children }) {
       cart
         .map((line) => {
           const product = catalog.find((item) => String(item.id) === String(line.id));
-          return product ? { ...product, qty: line.qty } : null;
+          if (!product) return null;
+
+          const selectedVariant =
+            Array.isArray(product.sizes) && product.sizes.length > 0
+              ? product.sizes.find((size) => String(size.value) === String(line.variant?.value)) || product.sizes[0]
+              : null;
+
+          const unitPrice = Number(line.price ?? selectedVariant?.price ?? product.price ?? 0);
+          const unitOldPrice = Number(line.oldprice ?? selectedVariant?.oldprice ?? product.oldprice ?? 0) || null;
+
+          return {
+            ...product,
+            key: line.key || `${String(product.id)}:default`,
+            qty: line.qty,
+            price: unitPrice,
+            oldprice: unitOldPrice,
+            variant: line.variant || (selectedVariant ? { value: selectedVariant.value, label: selectedVariant.label } : null),
+          };
         })
         .filter(Boolean),
     [cart, catalog]

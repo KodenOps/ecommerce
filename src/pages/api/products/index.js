@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const isAdmin = profile?.role === "ADMIN";
     const wantsAll = isAdmin && String(req.query.all || "") === "1";
 
-    let query = supabase.from("products").select("*");
+    let query = supabase.from("products").select("*, product_variants(*)");
     if (!wantsAll) query = query.eq("status", "ACTIVE");
     if (req.query.category) query = query.eq("category", String(req.query.category));
     if (req.query.q) query = query.ilike("title", `%${String(req.query.q).slice(0, 60)}%`);
@@ -49,6 +49,20 @@ export default async function handler(req, res) {
   if (!title) return sendJson(res, 400, { error: "Give the product a name." });
   if (!price) return sendJson(res, 400, { error: "Price must be greater than zero." });
 
+  const imageList = Array.isArray(body.images)
+    ? body.images
+    : typeof body.image === "string"
+      ? [body.image]
+      : [];
+  const normalizedImages = [...new Set(
+    imageList
+      .map((value) => cleanText(value, 500))
+      .filter(Boolean)
+  )].slice(0, 3);
+  const primaryImage = normalizedImages[0] ||
+    cleanText(body.image, 500) ||
+    "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80";
+
   const suffix = Math.random().toString(36).slice(2, 6);
   const product = {
     title,
@@ -58,9 +72,8 @@ export default async function handler(req, res) {
     category: cleanText(body.category, 60) || "Skincare",
     price,
     old_price: body.oldPrice ? readInt(body.oldPrice, 0) || null : null,
-    image:
-      cleanText(body.image, 500) ||
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80",
+    image: primaryImage,
+    images: normalizedImages.length ? normalizedImages : [primaryImage],
     stock,
     low_stock_at: Math.max(1, readInt(body.lowStockAt, 5)),
     status,

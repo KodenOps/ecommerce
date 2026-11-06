@@ -22,10 +22,10 @@ const TopProduct = () => {
     <section id="topProd" className="section">
       <Titles
         eyebrow="Bestsellers"
-        title="The rituals everyone keeps re-buying"
+        title="The routines everyone keeps re-buying"
         subtext="Our most-loved formulas, ranked by the queens who actually finish the bottle."
         action={
-          <Link href="/Shop" className="btn-secondary">
+          <Link href="/shop" className="btn-secondary">
             Shop everything
             <FiArrowRight size={14} />
           </Link>
@@ -70,7 +70,7 @@ const TopProduct = () => {
         <div className="card mt-6 p-10 text-center">
           <p className="font-display text-lg text-ink">Nothing in this ritual yet</p>
           <p className="mt-1 text-sm text-ink-soft">Try another category — or browse the full shop.</p>
-          <Link href="/Shop" className="btn-primary mt-5">
+          <Link href="/shop" className="btn-primary mt-5">
             Browse the shop
           </Link>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -49,6 +49,38 @@ export default function ProductPreview({ initialProduct }) {
   const [added, setAdded] = useState(false);
 
   const product = initialProduct || catalog.find((item) => item.id === initialProduct?.id) || null;
+  const productImages = useMemo(() => {
+    if (!product) return [];
+    const rawImages = Array.isArray(product.images) && product.images.length ? product.images : [];
+    const fallback = product.image ? [product.image] : [];
+    return [...new Set([...rawImages, ...fallback].filter(Boolean))].slice(0, 3);
+  }, [product]);
+  const [selectedImage, setSelectedImage] = useState(productImages[0] || "");
+  const variantOptions = useMemo(
+    () =>
+      product && Array.isArray(product.sizes) && product.sizes.length > 0
+        ? product.sizes
+        : [{ value: "default", label: "Standard", price: product?.price ?? 0, stock: product?.stock ?? 0 }],
+    [product]
+  );
+  const [selectedVariantValue, setSelectedVariantValue] = useState(variantOptions[0]?.value || "default");
+
+  useEffect(() => {
+    setSelectedVariantValue(variantOptions[0]?.value || "default");
+  }, [variantOptions]);
+
+  useEffect(() => {
+    setSelectedImage(productImages[0] || "");
+  }, [productImages]);
+
+  const selectedVariant =
+    variantOptions.find((option) => String(option.value) === String(selectedVariantValue)) || variantOptions[0];
+  const selectedPrice = Number(selectedVariant?.price ?? product?.price ?? 0);
+  const compareAt = Number(product?.oldprice) || 0;
+  const hasSaving = compareAt > selectedPrice;
+  const discount = hasSaving
+    ? Math.round(((compareAt - selectedPrice) / compareAt) * 100)
+    : 0;
 
   if (!product) {
     return (
@@ -67,7 +99,7 @@ export default function ProductPreview({ initialProduct }) {
                 : "The piece you're looking for isn't here — but the shelf is full of good company."}
             </p>
           </div>
-          <Link href="/Shop" className="btn-primary">
+          <Link href="/shop" className="btn-primary">
             Browse the shop
           </Link>
         </div>
@@ -75,15 +107,12 @@ export default function ProductPreview({ initialProduct }) {
     );
   }
 
-  const discount = product.oldprice
-    ? Math.round(((product.oldprice - product.price) / product.oldprice) * 100)
-    : 0;
   const saved = isFavorite(product.id);
   const soldOut = product.stock <= 0;
   const related = catalog.filter((item) => item.id !== product.id).slice(0, 4);
 
   const handleAdd = () => {
-    addToCart(product.id, quantity);
+    addToCart(product.id, quantity, selectedVariant);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -91,21 +120,23 @@ export default function ProductPreview({ initialProduct }) {
   return (
     <Layout>
       <div className="flex flex-col gap-8">
-        <Link href="/Shop" className="btn-ghost self-start px-0 text-xs">
+        <Link href="/shop" className="btn-ghost self-start px-0 text-xs">
           <FiArrowLeft size={13} /> Back to the shop
         </Link>
 
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-10">
           <div className="flex flex-col gap-3">
             <div className="relative aspect-square overflow-hidden rounded-4xl border border-line bg-gradient-to-br from-accent-soft via-surface-2 to-violet-soft shadow-card">
-              <Image
-                src={product.image}
-                alt={product.title}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 560px"
-                className="object-cover"
-              />
+              {selectedImage ? (
+                <Image
+                  src={selectedImage}
+                  alt={product.title}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  className="object-cover"
+                />
+              ) : null}
               {discount > 0 && (
                 <span className="absolute left-4 top-4 rounded-full bg-accent px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-accent-ink shadow-glow">
                   −{discount}% today
@@ -127,11 +158,25 @@ export default function ProductPreview({ initialProduct }) {
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {related.slice(0, 3).map((item) => (
-                <div key={item.id} className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2">
-                  <Image src={item.image} alt={item.title} fill sizes="120px" className="object-cover opacity-90" />
-                </div>
-              ))}
+              {productImages.length > 0 ? (
+                productImages.map((imageUrl, index) => (
+                  <button
+                    key={`${product.id}-${index}`}
+                    type="button"
+                    onClick={() => setSelectedImage(imageUrl)}
+                    className={`relative aspect-square overflow-hidden rounded-2xl border transition-all ${selectedImage === imageUrl ? "border-accent ring-2 ring-accent/25" : "border-line bg-surface-2"}`}
+                    aria-label={`Show product image ${index + 1}`}
+                  >
+                    <Image src={imageUrl} alt={`${product.title} ${index + 1}`} fill sizes="120px" className="object-cover opacity-90" />
+                  </button>
+                ))
+              ) : (
+                related.slice(0, 3).map((item) => (
+                  <div key={item.id} className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2">
+                    <Image src={item.image} alt={item.title} fill sizes="120px" className="object-cover opacity-90" />
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -160,13 +205,38 @@ export default function ProductPreview({ initialProduct }) {
               </p>
             </div>
 
+            {variantOptions.length > 1 && (
+              <div className="card p-4">
+                <p className="label">Choose size</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {variantOptions.map((option) => {
+                    const active = String(selectedVariantValue) === String(option.value);
+                    return (
+                      <button
+                        key={`${product.id}-${option.value}`}
+                        type="button"
+                        onClick={() => setSelectedVariantValue(option.value)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                          active
+                            ? "border-accent bg-accent text-accent-ink"
+                            : "border-line bg-surface-2 text-ink-soft hover:border-accent/60 hover:text-accent"
+                        }`}
+                      >
+                        {option.label || option.value}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="card flex flex-wrap items-end justify-between gap-4 p-5">
               <div>
                 <p className="label">Price</p>
                 <div className="mt-1 flex items-baseline gap-3">
-                  <span className="font-display text-3xl text-ink">{formatNaira(product.price)}</span>
-                  {product.oldprice && (
-                    <span className="text-sm text-muted line-through">{formatNaira(product.oldprice)}</span>
+                  <span className="font-display text-3xl text-ink">{formatNaira(selectedPrice)}</span>
+                  {hasSaving && (
+                    <span className="text-sm text-muted line-through">{formatNaira(compareAt)}</span>
                   )}
                   {discount > 0 && (
                     <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
@@ -209,7 +279,7 @@ export default function ProductPreview({ initialProduct }) {
                   ? "Sold out"
                   : added
                   ? "Added to bag"
-                  : `Add to bag · ${formatNaira(product.price * quantity)}`}
+                  : `Add to bag · ${formatNaira((Number(selectedVariant?.price ?? product.price ?? 0) * quantity))}`}
               </button>
               <button
                 type="button"
@@ -262,8 +332,8 @@ export default function ProductPreview({ initialProduct }) {
                 <span className="eyebrow">Pairs nicely</span>
                 <h2 className="mt-1 font-display text-2xl text-ink">Complete the ritual</h2>
               </div>
-              <Link href="/Shop" className="btn-ghost text-xs">
-                All rituals
+              <Link href="/shop" className="btn-ghost text-xs">
+                All routines
               </Link>
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

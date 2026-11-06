@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
   if (req.method === "GET") {
     const supabase = createServerSupabase(req, res);
-    const { data, error } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await supabase.from("products").select("*, product_variants(*)").eq("id", id).maybeSingle();
     if (error) return dbError(res, error, "We could not load that product.");
     if (!data) return sendJson(res, 404, { error: "Product not found." });
     return sendJson(res, 200, { product: toStoreProduct(data) });
@@ -68,7 +68,23 @@ export default async function handler(req, res) {
     updates.status = body.status;
   }
   if (body.featured !== undefined) updates.featured = Boolean(body.featured);
-  if (body.image !== undefined) updates.image = cleanText(body.image, 500);
+  if (body.images !== undefined || body.image !== undefined) {
+    const nextImages = Array.isArray(body.images)
+      ? body.images
+      : typeof body.image === "string"
+        ? [body.image]
+        : [];
+    const cleanedImages = [...new Set(
+      nextImages.map((value) => cleanText(value, 500)).filter(Boolean)
+    )].slice(0, 3);
+    if (cleanedImages.length) {
+      updates.images = cleanedImages;
+      updates.image = cleanedImages[0];
+    } else if (body.image === "") {
+      updates.images = [];
+      updates.image = "";
+    }
+  }
   if (body.sku !== undefined) updates.sku = cleanText(body.sku, 40);
 
   if (!Object.keys(updates).length) return sendJson(res, 400, { error: "Nothing to update." });

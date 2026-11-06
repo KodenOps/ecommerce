@@ -25,10 +25,11 @@ import NotificationBell from "./NotificationBell";
 import { useStore } from "@/store/store";
 import { useAuth } from "./AuthProvider";
 import { formatNaira } from "@/lib/money";
+import { lockBodyScroll } from "@/lib/bodyScroll";
 
 export const NAV_ITEMS = [
   { label: "Home", href: "/", icon: FiHome },
-  { label: "Shop", href: "/Shop", icon: FiShoppingBag },
+  { label: "Shop", href: "/shop", icon: FiShoppingBag },
   { label: "Promos", href: "/Promos", icon: FiTag },
   { label: "Orders", href: "/Orders", icon: FiPackage },
   { label: "Contact", href: "/Contact", icon: FiMail },
@@ -52,7 +53,7 @@ function BrandMark({ compact = false }) {
         </span>
         {!compact && (
           <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-accent">
-            Naija beauty
+            Skin Care
           </span>
         )}
       </span>
@@ -226,7 +227,7 @@ function SideRail({ pathname }) {
                 ? "Nothing in the bag yet — start with a bestseller."
                 : `${cartCount} ${cartCount === 1 ? "item" : "items"} · ${formatNaira(subtotal)}`}
             </p>
-            <Link href={cartCount === 0 ? "/Shop" : "/Cart"} className="btn-primary mt-4 w-full text-xs">
+            <Link href={cartCount === 0 ? "/shop" : "/Cart"} className="btn-primary mt-4 w-full text-xs">
               {cartCount === 0 ? "Browse the shop" : "View your bag"}
               <FiArrowRight size={14} />
             </Link>
@@ -248,11 +249,7 @@ function MobileNav({ open, onClose, pathname }) {
 
   useEffect(() => {
     if (!open) return undefined;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = original;
-    };
+    return lockBodyScroll();
   }, [open]);
 
   if (!open) return null;

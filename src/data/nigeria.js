@@ -40,7 +40,7 @@ export const NIGERIAN_STATES = [
 
 export const STORE = {
   name: "QueenFizzie",
-  tagline: "Naija beauty, delivered.",
+  tagline: "Skin Care, delivered.",
   email: "hello@queenfizzie.com",
   phone: "+234 803 000 0000",
   address: "12B Admiralty Way, Lekki Phase 1, Lagos",

@@ -293,7 +293,7 @@ export default function Checkout() {
               <Link href="/Orders" className="btn-primary flex-1">
                 Track my order
               </Link>
-              <Link href="/Shop" className="btn-secondary flex-1">
+              <Link href="/shop" className="btn-secondary flex-1">
                 Keep shopping
               </Link>
             </div>
@@ -317,7 +317,7 @@ export default function Checkout() {
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
               <FiShoppingBag size={22} />
             </span>
-            <Link href="/Shop" className="btn-primary">
+            <Link href="/shop" className="btn-primary">
               Browse the shop
               <FiArrowRight size={15} />
             </Link>

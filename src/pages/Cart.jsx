@@ -65,7 +65,7 @@ const Cart = () => {
                 pieces our Lagos customers keep restocking.
               </p>
             </div>
-            <Link href="/Shop" className="btn-primary">
+            <Link href="/shop" className="btn-primary">
               Browse the shop
               <FiArrowRight size={15} />
             </Link>
@@ -171,7 +171,7 @@ const Cart = () => {
                 </ul>
               </div>
 
-              <Link href="/Shop" className="btn-ghost self-start px-0 text-xs">
+              <Link href="/shop" className="btn-ghost self-start px-0 text-xs">
                 <FiArrowRight size={13} className="rotate-180" /> Continue shopping
               </Link>
             </div>

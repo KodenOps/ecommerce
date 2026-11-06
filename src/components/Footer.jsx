@@ -9,11 +9,11 @@ const COLUMNS = [
   {
     title: "Shop",
     links: [
-      { label: "All products", href: "/Shop" },
-      { label: "Skincare", href: "/Shop?category=Skincare" },
-      { label: "Lips & blush", href: "/Shop?category=Lips%20%26%20Blush" },
-      { label: "Body glow", href: "/Shop?category=Body%20Glow" },
-      { label: "Gift sets", href: "/Shop?category=Gifts%20%26%20Sets" },
+      { label: "All products", href: "/shop" },
+      { label: "Skincare", href: "/shop?category=Skincare" },
+      { label: "Lips & blush", href: "/shop?category=Lips%20%26%20Blush" },
+      { label: "Body glow", href: "/shop?category=Body%20Glow" },
+      { label: "Gift sets", href: "/shop?category=Gifts%20%26%20Sets" },
     ],
   },
   {
@@ -56,12 +56,12 @@ const Footer = () => {
                   Queen<span className="text-accent">Fizzie</span>
                 </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-accent">
-                  Naija beauty
+                  Skin Care
                 </p>
               </div>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">
-              Original skincare, body rituals and scent, blended for melanin-rich
+              Original skincare, body routines and scent, blended for melanin-rich
               skin and shipped from Lekki, Lagos to every state in Nigeria.
               100% original, tested &amp; trusted.
             </p>

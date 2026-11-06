@@ -1,11 +1,13 @@
-import { allowMethods, dbError, sendJson } from "@/lib/apiHelpers";
-import { createServerSupabase } from "@/lib/supabase/server";
+import { allowMethods, dbError, requireSession, sendJson } from "@/lib/apiHelpers";
 
-/** Public list of active codes shown on /Promos. */
+/** Authenticated list of active codes shown on /Promos. */
 export default async function handler(req, res) {
   if (!allowMethods(req, res, ["GET"])) return;
 
-  const supabase = createServerSupabase(req, res);
+  const session = await requireSession(req, res);
+  if (!session) return;
+
+  const { supabase } = session;
   const { data, error } = await supabase
     .from("promos")
     .select("code, description, type, value, min_subtotal, expires_at")
