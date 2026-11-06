@@ -61,9 +61,9 @@ const TRUST_BADGES = [
 
 const Categories = () => {
   return (
-    <section id="rituals" className="section">
+    <section id="routines" className="section">
       <Titles
-        eyebrow="Shop by ritual"
+        eyebrow="Shop by routine"
         title="Pick the mood, we'll bring the glow"
         subtext="Six small worlds of beauty — each one built around the moment you want to make for yourself, shipped from Lagos."
         action={

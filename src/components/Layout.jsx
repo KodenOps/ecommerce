@@ -33,6 +33,7 @@ const SIDE_LINKS = [
   ...NAV_ITEMS,
   { label: "Favorites", href: "/Favorites", icon: FiHeart },
   { label: "Your bag", href: "/Cart", icon: FiShoppingBag },
+  { label: "Sign in", href: "/Login", icon: FiUser },
 ];
 
 function BrandMark({ compact = false }) {
@@ -105,9 +106,9 @@ function Header({ onOpenMenu, pathname }) {
           {/* Right side: account, bag, then the mobile menu button */}
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
-              href="/Contact"
+              href="/Login"
               className="btn-icon hidden sm:inline-flex"
-              aria-label="Account and help"
+              aria-label="Sign in or account"
               title="Account"
             >
               <FiUser size={17} />

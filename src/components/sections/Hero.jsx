@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FiArrowRight, FiShield, FiStar, FiZap } from "react-icons/fi";
+import { FiArrowRight, FiShield, FiStar } from "react-icons/fi";
 import { GiQueenCrown } from "react-icons/gi";
 
 const SLIDES = [
@@ -45,19 +45,14 @@ const Hero = () => {
 
       <div className="relative grid gap-10 px-6 py-10 sm:px-10 sm:py-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-12">
         <div className="animate-rise">
-          <span className="stat-pill border-accent/30 bg-surface/70 text-accent">
-            <FiZap size={13} />
-            Trusted by 5,000+ queens nationwide
-          </span>
-
-          <h1 className="mt-5 font-display text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-[4.1rem]">
+          <h1 className="font-display text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-[4.1rem]">
             Naija beauty that
             <br />
             <span className="gradient-text italic">glows</span> for real
           </h1>
 
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink-soft sm:text-base">
-            Original skincare, body rituals and scent blended for melanin-rich
+            Original skincare, body routines and scent blended for melanin-rich
             skin — packed in Lekki, Lagos and delivered to every state in Nigeria
             in 1–5 days.
           </p>
@@ -67,8 +62,8 @@ const Hero = () => {
               Shop the glow
               <FiArrowRight size={15} />
             </Link>
-            <Link href="#rituals" className="btn-secondary">
-              Browse rituals
+            <Link href="#routines" className="btn-secondary">
+              Browse routines
             </Link>
           </div>
 
@@ -107,7 +102,7 @@ const Hero = () => {
             <div className="absolute inset-x-4 bottom-4 flex items-center justify-between gap-3 rounded-2xl border border-line/60 bg-surface/85 px-4 py-3 backdrop-blur-md">
               <div className="min-w-0">
                 <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                  Featured ritual
+                  Featured routine
                 </p>
                 <p className="truncate font-display text-sm text-ink">{SLIDES[index].caption}</p>
               </div>

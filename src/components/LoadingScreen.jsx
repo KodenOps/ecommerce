@@ -33,6 +33,15 @@ const LoadingScreen = () => {
     let dismissTimer = 0;
     let fadeTimer = 0;
 
+    // The splash never unmounts (it renders null), so the scroll lock has to be
+    // released when it finishes — not only in the effect cleanup.
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const restoreScroll = () => {
+      document.body.style.overflow = originalOverflow;
+    };
+
     const dismiss = () => {
       setFading(true);
       try {
@@ -41,7 +50,10 @@ const LoadingScreen = () => {
       } catch (error) {
         /* storage may be unavailable */
       }
-      fadeTimer = window.setTimeout(() => setHidden(true), FADE_MS);
+      fadeTimer = window.setTimeout(() => {
+        setHidden(true);
+        restoreScroll();
+      }, FADE_MS);
     };
 
     const schedule = () => {
@@ -57,15 +69,12 @@ const LoadingScreen = () => {
 
     const safety = window.setTimeout(dismiss, MAX_VISIBLE_MS);
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     return () => {
       window.clearTimeout(dismissTimer);
       window.clearTimeout(fadeTimer);
       window.clearTimeout(safety);
       window.removeEventListener("load", schedule);
-      document.body.style.overflow = originalOverflow;
+      restoreScroll();
     };
   }, []);
 

@@ -23,6 +23,7 @@ const COLUMNS = [
       { label: "Orders", href: "/Orders" },
       { label: "Favorites", href: "/Favorites" },
       { label: "Your bag", href: "/Cart" },
+      { label: "Sign in", href: "/Login" },
       { label: "Contact", href: "/Contact" },
     ],
   },
@@ -61,7 +62,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">
-              Original skincare, body rituals and scent, blended for melanin-rich
+              Original skincare, body routines and scent, blended for melanin-rich
               skin and shipped from Lekki, Lagos to every state in Nigeria.
               100% original, tested &amp; trusted.
             </p>
@@ -137,10 +138,10 @@ const Footer = () => {
         <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted sm:flex-row">
           <p>© {new Date().getFullYear()} {STORE.name}. Made in Lagos, Nigeria.</p>
           <div className="flex items-center gap-5">
-            <Link href="/Contact" className="transition-colors hover:text-accent">
+            <Link href="/Privacy" className="transition-colors hover:text-accent">
               Privacy
             </Link>
-            <Link href="/Contact" className="transition-colors hover:text-accent">
+            <Link href="/Terms" className="transition-colors hover:text-accent">
               Terms
             </Link>
             <Link href="/Contact" className="transition-colors hover:text-accent">

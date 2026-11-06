@@ -29,7 +29,7 @@ module.exports = {
         gold: withAlpha('--gold'),
       },
       fontFamily: {
-        display: ['var(--font-playfair)', 'Georgia', 'serif'],
+        display: ['var(--font-poppins)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         sans: ['var(--font-poppins)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       boxShadow: {

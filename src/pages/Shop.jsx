@@ -75,7 +75,7 @@ const Shop = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="The shop"
-          title="Every ritual, in one place"
+          title="Every routine, in one place"
           description="Twelve original formulas across skincare, scent and body — blended for melanin-rich skin in Nigeria, ready to ship from Lagos."
           crumbs={[{ label: "Home", href: "/" }, { label: "Shop" }]}
         />

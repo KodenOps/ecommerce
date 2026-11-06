@@ -48,7 +48,7 @@ const ProductPreview = () => {
             <FiShoppingBag size={26} />
           </span>
           <div>
-            <h1 className="font-display text-2xl text-ink">This ritual has wandered off</h1>
+            <h1 className="font-display text-2xl text-ink">This product has wandered off</h1>
             <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
               The piece you&apos;re looking for isn&apos;t here — but the shelf is full of good
               company.
@@ -208,7 +208,7 @@ const ProductPreview = () => {
                   }
                 }}
                 className="btn-secondary px-4"
-                aria-label="Share this ritual"
+                aria-label="Share this product"
               >
                 <FiShare2 size={15} />
               </button>
@@ -240,10 +240,10 @@ const ProductPreview = () => {
           <div className="flex items-end justify-between gap-4">
             <div>
               <span className="eyebrow">Pairs nicely</span>
-              <h2 className="mt-1 font-display text-2xl text-ink">Complete the ritual</h2>
+              <h2 className="mt-1 font-display text-2xl text-ink">Complete the routine</h2>
             </div>
             <Link href="/Shop" className="btn-ghost text-xs">
-              All rituals
+              All products
             </Link>
           </div>
           <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

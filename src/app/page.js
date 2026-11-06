@@ -9,7 +9,7 @@ import Promosection from "@/components/sections/Promosection";
 
 /*
   QueenFizzie — home
-  Hero → Shop by ritual → Bestsellers → Flash glow sale
+  Hero → Shop by routine → Bestsellers → Flash glow sale
 */
 export default function Home() {
   return (

@@ -49,7 +49,7 @@ const Promosection = () => {
       <div className="mt-8">
         <Titles
           eyebrow="On sale now"
-          title="Four rituals, quietly reduced"
+          title="Four routines, quietly reduced"
           subtext="The pieces our community restocks the moment they run low."
         />
         <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
