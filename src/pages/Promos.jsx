@@ -7,11 +7,12 @@ import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
 import { products } from "@/data/products";
+import { formatNaira } from "@/lib/money";
 
 const PROMO_CODES = [
-  { code: "GLOW15", detail: "15% off your first order" },
-  { code: "BLOOMSET", detail: "Free mini mist with any gift set" },
-  { code: "SUNDAY", detail: "Free shipping on Sundays" },
+  { code: "NAIJA15", detail: "15% off your first order" },
+  { code: "QUEENSET", detail: "Free mini mist with any gift box" },
+  { code: "LAGOSFREE", detail: "Free delivery within Lagos on orders over ₦80,000" },
 ];
 
 const Promos = () => {
@@ -62,8 +63,8 @@ const Promos = () => {
               </div>
               <div className="flex flex-col items-start gap-3 sm:items-end">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-display text-4xl text-accent">${biggest.price}</span>
-                  <span className="text-sm text-canvas/60 line-through">${biggest.oldprice}</span>
+                  <span className="font-display text-4xl text-accent">{formatNaira(biggest.price)}</span>
+                  <span className="text-sm text-canvas/60 line-through">{formatNaira(biggest.oldprice)}</span>
                 </div>
                 <Link
                   href={`/ProductPreview?id=${biggest.id}`}
@@ -82,7 +83,7 @@ const Promos = () => {
             <div>
               <span className="eyebrow">On sale</span>
               <h2 className="mt-1 font-display text-2xl text-ink">
-                {deals.length} reduced rituals
+                {deals.length} reduced products
               </h2>
             </div>
             <span className="stat-pill hidden sm:inline-flex">

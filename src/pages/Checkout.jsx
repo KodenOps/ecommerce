@@ -1,50 +1,35 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import {
+  FiAlertCircle,
   FiArrowLeft,
   FiArrowRight,
   FiCheck,
   FiCheckCircle,
-  FiCreditCard,
+  FiClock,
+  FiCopy,
+  FiFileText,
   FiLock,
   FiShoppingBag,
-  FiSmartphone,
-  FiTruck,
+  FiUploadCloud,
+  FiX,
 } from "react-icons/fi";
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/store/store";
-
-const money = (value) => `$${Number(value).toFixed(2)}`;
+import { formatNaira } from "@/lib/money";
+import { NIGERIAN_STATES, STORE } from "@/data/nigeria";
 
 const STEPS = [
-  { id: 1, label: "Shipping" },
+  { id: 1, label: "Delivery" },
   { id: 2, label: "Payment" },
   { id: 3, label: "Review" },
 ];
 
-const PAYMENT_METHODS = [
-  {
-    id: "paystack-card",
-    title: "Card · Paystack",
-    description: "Visa, Mastercard, or Verve through Paystack's secure checkout.",
-    icon: FiCreditCard,
-  },
-  {
-    id: "paystack-transfer",
-    title: "Bank transfer · dedicated account",
-    description: "Paystack issues a one-time account number for this order.",
-    icon: FiSmartphone,
-  },
-  {
-    id: "cod",
-    title: "Pay on delivery",
-    description: "Cash or transfer when your parcel arrives. Lagos & Abuja only.",
-    icon: FiTruck,
-  },
-];
+const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+const ALLOWED_RECEIPT_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 
 const EMPTY_FORM = {
   name: "",
@@ -57,21 +42,86 @@ const EMPTY_FORM = {
 };
 
 const Checkout = () => {
-  const { cartItems, cartCount, subtotal, delivery, total, placeOrder } = useStore();
+  const { cartItems, cartCount, subtotal, delivery, total, createOrder } = useStore();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [payment, setPayment] = useState("paystack-card");
+  const [receipt, setReceipt] = useState(null);
+  const [receiptError, setReceiptError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [placed, setPlaced] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef(null);
 
   const update = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
 
-  const shippingComplete =
-    form.name && form.email && form.address && form.city && form.state;
+  const deliveryComplete =
+    form.name && form.phone && form.address && form.city && form.state;
 
-  const handlePlaceOrder = () => {
-    const order = placeOrder({ customer: form, payment });
-    if (order) setPlaced(order);
+  const handleReceipt = (event) => {
+    const file = event.target.files?.[0];
+    setReceiptError("");
+    setSubmitError("");
+
+    if (!file) return;
+
+    if (!ALLOWED_RECEIPT_TYPES.includes(file.type)) {
+      setReceipt(null);
+      setReceiptError("Upload a PNG, JPG or PDF receipt.");
+      return;
+    }
+
+    if (file.size > MAX_RECEIPT_BYTES) {
+      setReceipt(null);
+      setReceiptError("That file is too large. Please upload a receipt under 5MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setReceipt({
+        dataUrl: String(reader.result),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+    };
+    reader.onerror = () => {
+      setReceipt(null);
+      setReceiptError("We could not read that file. Please try another one.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeReceipt = () => {
+    setReceipt(null);
+    setReceiptError("");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const copyAccountNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(STORE.bank.accountNumber);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      /* clipboard may be unavailable */
+    }
+  };
+
+  const handleCompleteOrder = async () => {
+    if (!receipt || submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const order = await createOrder({ customer: form, receipt });
+      if (order) setPlaced(order);
+    } catch (error) {
+      setSubmitError(error.message || "We could not submit your order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (placed) {
@@ -81,14 +131,18 @@ const Checkout = () => {
           <div className="card relative overflow-hidden p-8 text-center sm:p-12">
             <div className="aurora -top-16 left-1/2 h-56 w-56 -translate-x-1/2 bg-accent/30" />
             <div className="relative mx-auto flex max-w-md flex-col items-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent text-accent-ink shadow-glow">
-                <FiCheckCircle size={28} />
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent shadow-soft">
+                <FiClock size={28} />
               </span>
-              <h1 className="mt-5 font-display text-3xl text-ink">Your glow is on its way</h1>
+              <h1 className="mt-5 font-display text-3xl text-ink">Order received, Queen</h1>
               <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Order <strong className="text-ink">{placed.id}</strong> is confirmed. A receipt
-                is heading to {placed.customer?.email || "your inbox"}.
+                Receipt uploaded for order <strong className="text-ink">{placed.id}</strong>.
+                Our team is verifying your transfer now.
               </p>
+
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-xs font-semibold text-gold">
+                <FiClock size={13} /> Confirming Payment
+              </span>
 
               <div className="mt-6 w-full rounded-2xl border border-line bg-surface-2 p-4 text-left">
                 <div className="flex justify-between text-sm">
@@ -98,16 +152,25 @@ const Checkout = () => {
                   </span>
                 </div>
                 <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-ink-soft">Paid with</span>
-                  <span className="font-medium capitalize text-ink">
-                    {placed.payment.replace("paystack-", "").replace("-", " ")}
-                  </span>
+                  <span className="text-ink-soft">Payment</span>
+                  <span className="font-medium text-ink">Bank transfer</span>
                 </div>
                 <div className="mt-2 flex justify-between text-sm">
                   <span className="text-ink-soft">Total</span>
-                  <span className="font-semibold text-ink">{money(placed.total)}</span>
+                  <span className="font-semibold text-ink">{formatNaira(placed.total)}</span>
+                </div>
+                <div className="mt-2 flex justify-between text-sm">
+                  <span className="text-ink-soft">Deliver to</span>
+                  <span className="max-w-[60%] text-right font-medium text-ink">
+                    {placed.customer?.city}, {placed.customer?.state}
+                  </span>
                 </div>
               </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-muted">
+                Your status stays <strong className="text-ink">Confirming Payment</strong> until
+                the transfer is approved. You can follow it on your Orders page.
+              </p>
 
               <div className="mt-7 flex w-full flex-col gap-2 sm:flex-row">
                 <Link href="/Orders" className="btn-primary flex-1">
@@ -131,7 +194,7 @@ const Checkout = () => {
           <PageHeader
             eyebrow="Checkout"
             title="Nothing to check out — yet"
-            description="Your bag is empty. Add a ritual and this page will pick up right where you left off."
+            description="Your bag is empty. Add a product and this page will pick up right where you left off."
             crumbs={[{ label: "Home", href: "/" }, { label: "Checkout" }]}
           />
           <div className="card flex flex-col items-center gap-4 px-6 py-14 text-center">
@@ -153,8 +216,8 @@ const Checkout = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Checkout"
-          title="Three quiet steps"
-          description="Shipping, payment, then a last look before your rituals are on their way."
+          title="Three quick steps"
+          description="Delivery details, bank transfer with your receipt, then a last look before we pack your order."
           crumbs={[{ label: "Home", href: "/" }, { label: "Bag", href: "/Cart" }, { label: "Checkout" }]}
           actions={
             <Link href="/Cart" className="btn-secondary">
@@ -198,7 +261,7 @@ const Checkout = () => {
                 <div>
                   <h2 className="font-display text-xl text-ink">Where should it go?</h2>
                   <p className="mt-1 text-sm text-ink-soft">
-                    We ship within 1–2 business days from Brooklyn.
+                    We dispatch from Lekki, Lagos — nationwide in 1–5 working days.
                   </p>
                 </div>
 
@@ -212,13 +275,27 @@ const Checkout = () => {
                       value={form.name}
                       onChange={update("name")}
                       className="field mt-1.5"
-                      placeholder="Ada Nwosu"
+                      placeholder="Chiamaka Okafor"
                       autoComplete="name"
                     />
                   </div>
                   <div>
+                    <label htmlFor="phone" className="label">
+                      Phone (for delivery)
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      value={form.phone}
+                      onChange={update("phone")}
+                      className="field mt-1.5"
+                      placeholder="0803 000 0000"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="email" className="label">
-                      Email
+                      Email (optional)
                     </label>
                     <input
                       id="email"
@@ -230,19 +307,6 @@ const Checkout = () => {
                       autoComplete="email"
                     />
                   </div>
-                  <div>
-                    <label htmlFor="phone" className="label">
-                      Phone
-                    </label>
-                    <input
-                      id="phone"
-                      value={form.phone}
-                      onChange={update("phone")}
-                      className="field mt-1.5"
-                      placeholder="+234 800 000 0000"
-                      autoComplete="tel"
-                    />
-                  </div>
                   <div className="sm:col-span-2">
                     <label htmlFor="address" className="label">
                       Street address
@@ -252,35 +316,41 @@ const Checkout = () => {
                       value={form.address}
                       onChange={update("address")}
                       className="field mt-1.5"
-                      placeholder="24 Petal Lane, Apt 3B"
+                      placeholder="15B Admiralty Way, Lekki Phase 1"
                       autoComplete="street-address"
                     />
                   </div>
                   <div>
                     <label htmlFor="city" className="label">
-                      City
+                      City / town
                     </label>
                     <input
                       id="city"
                       value={form.city}
                       onChange={update("city")}
                       className="field mt-1.5"
-                      placeholder="Brooklyn"
+                      placeholder="Lagos"
                       autoComplete="address-level2"
                     />
                   </div>
                   <div>
                     <label htmlFor="state" className="label">
-                      State / region
+                      State
                     </label>
-                    <input
+                    <select
                       id="state"
                       value={form.state}
                       onChange={update("state")}
-                      className="field mt-1.5"
-                      placeholder="New York"
+                      className="field mt-1.5 cursor-pointer"
                       autoComplete="address-level1"
-                    />
+                    >
+                      <option value="">Select your state</option>
+                      {NIGERIAN_STATES.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="sm:col-span-2">
                     <label htmlFor="notes" className="label">
@@ -291,7 +361,7 @@ const Checkout = () => {
                       value={form.notes}
                       onChange={update("notes")}
                       className="field mt-1.5"
-                      placeholder="Leave with the concierge"
+                      placeholder="Near the yellow gate, call when you arrive"
                     />
                   </div>
                 </div>
@@ -299,15 +369,15 @@ const Checkout = () => {
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  disabled={!shippingComplete}
+                  disabled={!deliveryComplete}
                   className="btn-primary mt-1 self-start"
                 >
                   Continue to payment
                   <FiArrowRight size={15} />
                 </button>
-                {!shippingComplete && (
+                {!deliveryComplete && (
                   <p className="text-[11px] text-muted">
-                    Name, email, address, city, and state are needed to continue.
+                    Name, phone, address, city and state are needed to continue.
                   </p>
                 )}
               </div>
@@ -316,62 +386,111 @@ const Checkout = () => {
             {step === 2 && (
               <div className="flex flex-col gap-4">
                 <div>
-                  <h2 className="font-display text-xl text-ink">How would you like to pay?</h2>
+                  <h2 className="font-display text-xl text-ink">Pay by bank transfer</h2>
                   <p className="mt-1 text-sm text-ink-soft">
-                    Payments are processed securely — this demo does not charge a card.
+                    Transfer the exact amount, then upload your receipt below. We verify
+                    every payment before dispatch.
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-2.5">
-                  {PAYMENT_METHODS.map((method) => {
-                    const Icon = method.icon;
-                    const active = payment === method.id;
-                    return (
+                <div className="rounded-2xl border border-line bg-surface-2 p-4">
+                  <p className="label">Transfer to</p>
+                  <p className="mt-1.5 text-sm font-semibold text-ink">{STORE.bank.bankName}</p>
+                  <p className="text-xs text-ink-soft">{STORE.bank.accountName}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xl font-bold tracking-[0.18em] text-ink">
+                      {STORE.bank.accountNumber}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={copyAccountNumber}
+                      className="btn-icon h-8 w-8"
+                      aria-label="Copy account number"
+                    >
+                      {copied ? <FiCheck size={13} /> : <FiCopy size={13} />}
+                    </button>
+                  </div>
+                  <div className="divider my-3" />
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs text-ink-soft">Amount to transfer</span>
+                    <span className="font-display text-xl text-ink">{formatNaira(total)}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="label mb-2">Upload payment receipt</p>
+                  {receipt ? (
+                    <div className="flex items-center gap-3 rounded-2xl border border-accent/40 bg-accent-soft/50 p-3">
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-surface">
+                        {receipt.type === "application/pdf" ? (
+                          <FiFileText size={22} className="text-accent" />
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={receipt.dataUrl}
+                            alt="Uploaded receipt preview"
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+                          <FiCheckCircle size={14} className="text-accent" /> Receipt attached
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-ink-soft">
+                          {receipt.name} · {(receipt.size / 1024).toFixed(0)} KB
+                        </span>
+                      </span>
                       <button
-                        key={method.id}
                         type="button"
-                        onClick={() => setPayment(method.id)}
-                        aria-pressed={active}
-                        className={`flex items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200 ${
-                          active
-                            ? "border-accent bg-accent-soft/60 shadow-soft"
-                            : "border-line bg-surface/60 hover:border-line-strong"
-                        }`}
+                        onClick={removeReceipt}
+                        className="btn-icon h-8 w-8"
+                        aria-label="Remove receipt"
                       >
-                        <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                            active ? "bg-accent text-accent-ink" : "bg-surface-2 text-ink-soft"
-                          }`}
-                        >
-                          <Icon size={17} />
-                        </span>
-                        <span className="flex-1">
-                          <span className="block text-sm font-semibold text-ink">
-                            {method.title}
-                          </span>
-                          <span className="mt-0.5 block text-xs leading-relaxed text-ink-soft">
-                            {method.description}
-                          </span>
-                        </span>
-                        <span
-                          className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                            active ? "border-accent bg-accent text-accent-ink" : "border-line-strong"
-                          }`}
-                        >
-                          {active && <FiCheck size={11} />}
-                        </span>
+                        <FiX size={14} />
                       </button>
-                    );
-                  })}
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="receipt"
+                      className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed border-line-strong bg-surface/60 px-4 py-8 text-center transition-colors hover:border-accent/50 hover:bg-surface-2"
+                    >
+                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent">
+                        <FiUploadCloud size={19} />
+                      </span>
+                      <span className="text-sm font-semibold text-ink">
+                        Tap to upload your receipt
+                      </span>
+                      <span className="text-[11px] text-muted">PNG, JPG or PDF · max 5MB</span>
+                      <input
+                        ref={fileInputRef}
+                        id="receipt"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,application/pdf"
+                        onChange={handleReceipt}
+                        className="sr-only"
+                      />
+                    </label>
+                  )}
+                  {receiptError && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+                      <FiAlertCircle size={12} /> {receiptError}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-[11px] text-ink-soft">
                   <FiLock size={13} className="text-accent" />
-                  Encrypted checkout · we never store card details
+                  Your receipt is only used to confirm this payment.
                 </div>
 
                 <div className="mt-1 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setStep(3)} className="btn-primary">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    disabled={!receipt}
+                    className="btn-primary"
+                  >
                     Review order
                     <FiArrowRight size={15} />
                   </button>
@@ -379,6 +498,11 @@ const Checkout = () => {
                     Back
                   </button>
                 </div>
+                {!receipt && (
+                  <p className="text-[11px] text-muted">
+                    Upload your receipt to continue to the review step.
+                  </p>
+                )}
               </div>
             )}
 
@@ -387,7 +511,8 @@ const Checkout = () => {
                 <div>
                   <h2 className="font-display text-xl text-ink">A last look</h2>
                   <p className="mt-1 text-sm text-ink-soft">
-                    Confirm the details below and we&apos;ll start packing.
+                    Confirm the details below and tap Complete order. We start packing as
+                    soon as your transfer is confirmed.
                   </p>
                 </div>
 
@@ -400,7 +525,7 @@ const Checkout = () => {
                       <br />
                       {form.city}, {form.state}
                       <br />
-                      {form.email}
+                      {form.phone}
                     </p>
                     <button
                       type="button"
@@ -411,14 +536,10 @@ const Checkout = () => {
                     </button>
                   </div>
                   <div className="rounded-2xl border border-line bg-surface-2 p-4">
-                    <p className="label">Paying with</p>
-                    <p className="mt-1.5 text-sm font-medium capitalize text-ink">
-                      {payment.replace("paystack-", "").replace("-", " ")}
-                    </p>
+                    <p className="label">Payment</p>
+                    <p className="mt-1.5 text-sm font-medium text-ink">Bank transfer</p>
                     <p className="text-xs leading-relaxed text-ink-soft">
-                      {payment === "cod"
-                        ? "Payment collected on delivery."
-                        : "A secure Paystack prompt follows on confirmation."}
+                      {receipt ? `Receipt attached · ${receipt.name}` : "No receipt uploaded yet."}
                     </p>
                     <button
                       type="button"
@@ -438,20 +559,35 @@ const Checkout = () => {
                         <span className="text-[11px] text-muted">Qty {item.qty}</span>
                       </span>
                       <span className="text-sm font-medium text-ink">
-                        {money(item.price * item.qty)}
+                        {formatNaira(item.price * item.qty)}
                       </span>
                     </li>
                   ))}
                 </ul>
 
+                {submitError && (
+                  <p className="flex items-center gap-1.5 rounded-2xl border border-accent/40 bg-accent-soft/60 px-4 py-3 text-xs font-medium text-accent">
+                    <FiAlertCircle size={13} /> {submitError}
+                  </p>
+                )}
+
                 <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={handlePlaceOrder} className="btn-primary">
-                    Place order · {money(total)}
+                  <button
+                    type="button"
+                    onClick={handleCompleteOrder}
+                    disabled={!receipt || submitting}
+                    className="btn-primary"
+                  >
+                    {submitting ? "Submitting…" : `Complete order · ${formatNaira(total)}`}
                   </button>
                   <button type="button" onClick={() => setStep(2)} className="btn-secondary">
                     Back
                   </button>
                 </div>
+                <p className="text-[11px] text-muted">
+                  Your order shows <strong className="text-ink">Confirming Payment</strong>{" "}
+                  until our team verifies the transfer.
+                </p>
               </div>
             )}
           </div>
@@ -465,7 +601,7 @@ const Checkout = () => {
                     {item.title} <span className="text-muted">×{item.qty}</span>
                   </span>
                   <span className="shrink-0 font-medium text-ink">
-                    {money(item.price * item.qty)}
+                    {formatNaira(item.price * item.qty)}
                   </span>
                 </li>
               ))}
@@ -476,19 +612,24 @@ const Checkout = () => {
             <dl className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-ink-soft">Subtotal</dt>
-                <dd className="font-medium text-ink">{money(subtotal)}</dd>
+                <dd className="font-medium text-ink">{formatNaira(subtotal)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-ink-soft">Delivery</dt>
                 <dd className="font-medium text-ink">
-                  {delivery === 0 ? "Free" : money(delivery)}
+                  {delivery === 0 ? "Free" : formatNaira(delivery)}
                 </dd>
               </div>
               <div className="mt-1 flex items-baseline justify-between">
                 <dt className="font-display text-base text-ink">Total</dt>
-                <dd className="font-display text-2xl text-ink">{money(total)}</dd>
+                <dd className="font-display text-2xl text-ink">{formatNaira(total)}</dd>
               </div>
             </dl>
+
+            <div className="mt-4 flex flex-col gap-1.5 text-[11px] text-muted">
+              <span>{STORE.bank.bankName} · {STORE.bank.accountNumber}</span>
+              <span>Nationwide delivery · 1–5 working days</span>
+            </div>
           </aside>
         </div>
       </div>

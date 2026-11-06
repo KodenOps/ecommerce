@@ -75,8 +75,8 @@ const Shop = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="The shop"
-          title="Every ritual, in one quiet place"
-          description="Twelve considered formulas across skincare, scent, and body — filter by ritual, sort by mood, and build the shelf that feels like you."
+          title="Every ritual, in one place"
+          description="Twelve original formulas across skincare, scent and body — blended for melanin-rich skin in Nigeria, ready to ship from Lagos."
           crumbs={[{ label: "Home", href: "/" }, { label: "Shop" }]}
         />
 
@@ -91,7 +91,7 @@ const Shop = () => {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search serums, mists, candles…"
+                placeholder="Search serums, mists, shea oil…"
                 className="field pl-10 pr-9"
                 aria-label="Search products"
               />
@@ -143,7 +143,7 @@ const Shop = () => {
 
           <div className="flex items-center justify-between border-t border-line pt-3 text-xs text-muted">
             <span>
-              {visible.length} {visible.length === 1 ? "ritual" : "rituals"}
+              {visible.length} {visible.length === 1 ? "product" : "products"}
               {category !== "All" && ` in ${category}`}
             </span>
             {(category !== "All" || query) && (
@@ -169,7 +169,7 @@ const Shop = () => {
           </div>
         ) : (
           <div className="card p-12 text-center">
-            <p className="font-display text-xl text-ink">No rituals match that</p>
+            <p className="font-display text-xl text-ink">No products match that</p>
             <p className="mx-auto mt-2 max-w-sm text-sm text-ink-soft">
               Try a different word, or reset the filters to see the whole shelf.
             </p>

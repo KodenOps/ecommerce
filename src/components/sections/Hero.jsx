@@ -4,27 +4,27 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiShield, FiStar, FiZap } from "react-icons/fi";
-import { GiDaisy } from "react-icons/gi";
+import { GiQueenCrown } from "react-icons/gi";
 
 const SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&q=80",
-    caption: "Cloud Dew Serum",
+    caption: "Zobo Dew Hydrating Serum",
   },
   {
     image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=1200&q=80",
-    caption: "Petal & Pear Set",
+    caption: "Queen's Owambe Gift Box",
   },
   {
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?w=1200&q=80",
-    caption: "Moonlight Rose Mist",
+    caption: "Owambe Rose Body Mist",
   },
 ];
 
 const STATS = [
+  { label: "Queens served", value: "12k+" },
   { label: "Avg. rating", value: "4.9" },
-  { label: "Happy glows", value: "12k+" },
-  { label: "Clean formulas", value: "100%" },
+  { label: "Original", value: "100%" },
 ];
 
 const Hero = () => {
@@ -47,18 +47,19 @@ const Hero = () => {
         <div className="animate-rise">
           <span className="stat-pill border-accent/30 bg-surface/70 text-accent">
             <FiZap size={13} />
-            Your daily dose of glow
+            Trusted by 5,000+ queens nationwide
           </span>
 
           <h1 className="mt-5 font-display text-[2.6rem] leading-[1.05] text-ink sm:text-6xl lg:text-[4.1rem]">
-            Beauty that
+            Naija beauty that
             <br />
-            <span className="gradient-text italic">glows</span> from within
+            <span className="gradient-text italic">glows</span> for real
           </h1>
 
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink-soft sm:text-base">
-            Luminous skincare, scented rituals, and small luxuries that turn an
-            ordinary morning into something you look forward to.
+            Original skincare, body rituals and scent blended for melanin-rich
+            skin — packed in Lekki, Lagos and delivered to every state in Nigeria
+            in 1–5 days.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -119,13 +120,13 @@ const Hero = () => {
           <div className="absolute -left-3 top-6 hidden animate-float rounded-2xl border border-line bg-surface/90 px-4 py-3 shadow-card backdrop-blur sm:block">
             <div className="flex items-center gap-2 text-xs font-semibold text-ink">
               <FiShield className="text-accent" size={14} />
-              Cruelty-free
+              100% Original
             </div>
-            <p className="mt-0.5 text-[10px] text-muted">Always, no exceptions</p>
+            <p className="mt-0.5 text-[10px] text-muted">Tested &amp; trusted</p>
           </div>
 
           <div className="absolute -right-3 top-20 hidden items-center justify-center rounded-full bg-gradient-to-br from-accent to-violet p-3 text-accent-ink shadow-glow sm:flex">
-            <GiDaisy size={22} />
+            <GiQueenCrown size={22} />
           </div>
 
           <div className="mt-4 flex items-center justify-center gap-2">

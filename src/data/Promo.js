@@ -1,11 +1,11 @@
 const Promo = [
   {
     id: 1,
-    title: 'Cloud Dew Hydrating Serum',
-    price: 32,
-    oldprice: 64,
+    title: 'Zobo Dew Hydrating Serum',
+    price: 19000,
+    oldprice: 38000,
     description:
-      'A weightless water-serum that sinks in like a sip of cool sky. Hyaluronic glow, cucumber calm, and a soft vanilla-rain finish that makes skin feel freshly kissed by morning.',
+      'A weightless water-serum brewed with zobo, hyaluronic acid and cucumber extract. Sinks in fast, calms Lagos heat, and leaves skin looking freshly watered — no shine, no stickiness.',
     category: 'Skincare',
     image:
       'https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=768&q=80',
@@ -13,11 +13,11 @@ const Promo = [
   },
   {
     id: 2,
-    title: 'Blush Petals Lip Glow',
-    price: 24,
-    oldprice: 38,
+    title: 'Hibiscus Petal Lip Glow',
+    price: 14500,
+    oldprice: 23000,
     description:
-      'A tinted lip oil that behaves like a sweet secret — gloss, color, and a hint of peachy blush in one swipe. Comfortable, non-sticky, and basically instant grin material.',
+      'A tinted lip oil made for melanin-rich lips: hibiscus colour, shea softness, and a glossy finish that survives small chops and owambe photos. Comfortable, never sticky.',
     category: 'Lips & Blush',
     image:
       'https://images.unsplash.com/photo-1587017539504-67cfbddac569?w=768&q=80',
@@ -25,11 +25,11 @@ const Promo = [
   },
   {
     id: 3,
-    title: 'Moonlight Rose Body Mist',
-    price: 28,
-    oldprice: 48,
+    title: 'Owambe Rose Body Mist',
+    price: 17000,
+    oldprice: 29000,
     description:
-      'A dreamy body fragrance mist with rose, vanilla, and a whisper of musk. Spritz on skin, clothes, or your pillow for a soft afterglow that lasts all evening.',
+      'A body mist with rose, vanilla and soft musk that holds up through the whole party. Spritz on skin, gele, or aso-oke for a warm trail that lasts the evening.',
     category: 'Mists & Toners',
     image:
       'https://images.unsplash.com/photo-1594035910387-fea47794261f?w=768&q=80',
@@ -37,11 +37,11 @@ const Promo = [
   },
   {
     id: 4,
-    title: 'Petal Silk Cleansing Balm',
-    price: 36,
-    oldprice: 56,
+    title: 'Dudu Black Soap Cleansing Balm',
+    price: 21500,
+    oldprice: 33500,
     description:
-      'A silky balm that melts into a cloud and takes the day with it. Melon + chamomile + a touch of rice bran for skin that feels clean, soft, and ready for its close-up.',
+      'Our traditional black soap, reimagined as a silky balm. Melts into a cloud, lifts the day (and the harmattan dust) and leaves skin clean, soft and never tight.',
     category: 'Skincare',
     image:
       'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=768&q=80',
@@ -49,11 +49,11 @@ const Promo = [
   },
   {
     id: 5,
-    title: 'Gilded Body Glow Oil',
-    price: 42,
-    oldprice: 70,
+    title: 'Shea & Baobab Glow Oil',
+    price: 25000,
+    oldprice: 42000,
     description:
-      'A shimmering dry body oil with golden mica, jojoba, and a warm amber hint. For when your skin wants to catch the light just a little bit more than usual.',
+      'A shimmering dry body oil with unrefined shea, baobab and golden mica. Made for deep skin tones that want to catch the light at the next owambe.',
     category: 'Body Glow',
     image:
       'https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=768&q=80',
@@ -61,11 +61,11 @@ const Promo = [
   },
   {
     id: 6,
-    title: 'Velvet Rose Candle',
-    price: 34,
-    oldprice: 54,
+    title: 'Lekki Nights Rose Candle',
+    price: 20500,
+    oldprice: 32500,
     description:
-      'A cozy candle in notes of rose, cream, and soft amber. Not too loud, not too shy — just the right amount of romantic for a slow night in with good vibes.',
+      'A quiet candle in notes of rose, cream and amber — the calm after a loud Lagos day. Burn it while you unwind, and let the whole room soften.',
     category: 'Scented Candles',
     image:
       'https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=768&q=80',
@@ -73,11 +73,11 @@ const Promo = [
   },
   {
     id: 7,
-    title: 'Dewdrop Tinted Lip Oil (Set of 3)',
-    price: 48,
-    oldprice: 78,
+    title: 'Naija Nude Lip Oil Trio',
+    price: 29000,
+    oldprice: 47000,
     description:
-      'Three dreamy tints in one little kit: berry, peach, and rose. Stackable, swipeable, perfect for experimenting with your smile of the day.',
+      'Three nude tints made for Nigerian skin: berry, warm peach and deep rose. Stackable, swipeable, and the easiest way to find your everyday lip colour.',
     category: 'Lips & Blush',
     image:
       'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=768&q=80',
@@ -85,11 +85,11 @@ const Promo = [
   },
   {
     id: 8,
-    title: 'Starlight Eye Glow Stick',
-    price: 22,
-    oldprice: 34,
+    title: 'Gold Coast Eye Glow Stick',
+    price: 13000,
+    oldprice: 20500,
     description:
-      'A creamy eye glow stick that brightens lids, softens creases, and adds just enough sparkle to make your eyes look like they have been on a little vacation.',
+      'A creamy eye glow stick that brightens lids, softens creases and adds just enough sparkle for church, brunch or a last-minute date.',
     category: 'Lips & Blush',
     image:
       'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=768&q=80',
@@ -97,11 +97,11 @@ const Promo = [
   },
   {
     id: 9,
-    title: 'Moon & Mint Facial Mist',
-    price: 26,
-    oldprice: 42,
+    title: 'Zobo & Mint Facial Mist',
+    price: 15500,
+    oldprice: 25000,
     description:
-      'A chilled-out mist of rose water, mint, and a touch of glycerin. Refresh midday, set makeup, or cool down a mood. Very marshmallow-soft on the skin.',
+      'A chilled mist of zobo, mint and glycerin. Refresh a hot afternoon, set makeup, or cool an annoyed mood. Very soft on the skin.',
     category: 'Mists & Toners',
     image:
       'https://images.unsplash.com/photo-1617897903246-719242758050?w=768&q=80',
@@ -109,11 +109,11 @@ const Promo = [
   },
   {
     id: 10,
-    title: 'Solar Flare Highlighter Drops',
-    price: 30,
-    oldprice: 46,
+    title: 'Sun-Kissed Highlighter Drops',
+    price: 18000,
+    oldprice: 27500,
     description:
-      'Liquid highlighter with a pearlescent melt — champagne gold on light skin, rose-gold glow on deeper skin. Drip it, dab it, let your cheekbones do their thing.',
+      'Liquid highlighter with a pearlescent melt — champagne gold for lighter tones, rose gold for deeper tones. Dab it on cheekbones and let your face do the talking.',
     category: 'Lips & Blush',
     image:
       'https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=768&q=80',
@@ -121,11 +121,11 @@ const Promo = [
   },
   {
     id: 11,
-    title: 'Raincloud Moisture Cream',
-    price: 40,
-    oldprice: 62,
+    title: 'Harmattan Defence Moisture Cream',
+    price: 24000,
+    oldprice: 37000,
     description:
-      'A luxe moisture cream that feels like a soft raincloud landing on your face. Squalane, oat, and a little blur-magic for skin that wants to be calm and glowy.',
+      'A rich moisture cream for harmattan mornings and air-conditioned offices. Shea, oat and squalane for skin that wants to stay calm, plump and glowy.',
     category: 'Skincare',
     image:
       'https://images.unsplash.com/photo-1620916297397-a4a5402a3c6c?w=768&q=80',
@@ -133,11 +133,11 @@ const Promo = [
   },
   {
     id: 12,
-    title: 'Petal & Pear Gift Box',
-    price: 88,
-    oldprice: 130,
+    title: "Queen's Owambe Gift Box",
+    price: 53000,
+    oldprice: 78000,
     description:
-      'A curated mini haul in a reusable pastel box: lip oil, mist, hand balm, and a candle trinket. Best friend gift, self-treat, or just because I like you gift.',
+      'A curated mini haul in a reusable box: lip oil, body mist, shea balm and a candle trinket. Perfect for a bridal train, a best friend, or a well-deserved self-treat.',
     category: 'Gifts & Sets',
     image:
       'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80',

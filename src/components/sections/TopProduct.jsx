@@ -22,10 +22,10 @@ const TopProduct = () => {
       <Titles
         eyebrow="Bestsellers"
         title="The rituals everyone keeps re-buying"
-        subtext="Our most-loved formulas, ranked by the people who actually finish the bottle."
+        subtext="Our most-loved formulas, ranked by the queens who actually finish the bottle."
         action={
           <Link href="/Shop" className="btn-secondary">
-            Shop all rituals
+            Shop everything
             <FiArrowRight size={14} />
           </Link>
         }

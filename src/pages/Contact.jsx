@@ -13,50 +13,57 @@ import {
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import Titles from "@/components/Titles";
+import { STORE } from "@/data/nigeria";
+import { formatNaira } from "@/lib/money";
+import { FREE_DELIVERY_OVER } from "@/lib/pricing";
 
 const CHANNELS = [
   {
     icon: FiMail,
     label: "Email",
-    value: "hello@bloomandglow.com",
+    value: STORE.email,
     detail: "We reply within one business day.",
   },
   {
     icon: FiPhone,
     label: "Phone",
-    value: "+1 (555) 014-8820",
-    detail: "Mon–Fri, 9am–6pm ET.",
+    value: STORE.phone,
+    detail: STORE.hours,
   },
   {
     icon: FiMapPin,
     label: "Studio",
-    value: "24 Petal Lane, Brooklyn",
-    detail: "Bookings by appointment.",
+    value: STORE.address,
+    detail: "Pickups by appointment.",
   },
   {
     icon: FiClock,
     label: "Dispatch",
-    value: "Ships in 1–2 days",
-    detail: "Free over $75, tracked.",
+    value: "Ships from Lekki",
+    detail: `Free over ${formatNaira(FREE_DELIVERY_OVER)}, nationwide.`,
   },
 ];
 
 const FAQS = [
   {
     question: "How long does delivery take?",
-    answer: "Orders leave our Brooklyn studio within 1–2 business days, then arrive in 2–5 days depending on your region.",
+    answer:
+      "Lagos orders arrive in 24–48 hours. Every other state takes 2–5 working days after dispatch from Lekki. You can follow the status on your Orders page.",
   },
   {
-    question: "Can I return an opened ritual?",
-    answer: "Unopened products can be returned within 30 days. If your skin reacted, message us and we'll make it right.",
+    question: "How do I pay for my order?",
+    answer:
+      "Place your order, transfer the total to our store account, then upload your receipt at checkout. Our team confirms the transfer before dispatch.",
   },
   {
-    question: "Do you restock sold-out formulas?",
-    answer: "Most bestsellers restock every few weeks. Join the glow letter and you'll hear before it goes live.",
+    question: "Are the products original?",
+    answer:
+      "Yes — 100% original and tested & trusted. Every item is sealed and inspected before packing, and we never mix batches.",
   },
   {
-    question: "Are the formulas cruelty-free?",
-    answer: "Yes — always. No animal testing at any stage, and no third-party suppliers who test on our behalf.",
+    question: "Can I return an item?",
+    answer:
+      "Unopened products can be returned within 7 days of delivery. If something arrived damaged, message us with a photo and we will make it right.",
   },
 ];
 
@@ -78,8 +85,8 @@ const Contact = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Contact"
-          title="Say hello — we're listening"
-          description="Questions about a formula, an order, or a shade? A real person reads every message."
+          title="Talk to QueenFizzie"
+          description="Questions about an order, a formula or a shade match? Our Lagos team reads every message."
           crumbs={[{ label: "Home", href: "/" }, { label: "Contact" }]}
           actions={
             <Link href="/Orders" className="btn-secondary">
@@ -147,7 +154,7 @@ const Contact = () => {
                       value={form.name}
                       onChange={update("name")}
                       className="field mt-1.5"
-                      placeholder="Ada Nwosu"
+                      placeholder="Chiamaka Okafor"
                     />
                   </div>
                   <div>
@@ -177,7 +184,7 @@ const Contact = () => {
                       <option>Order help</option>
                       <option>Product advice</option>
                       <option>Returns</option>
-                      <option>Press & partnerships</option>
+                      <option>Bulk & bridal orders</option>
                       <option>Something else</option>
                     </select>
                   </div>
@@ -207,11 +214,11 @@ const Contact = () => {
 
           <div className="flex flex-col gap-4">
             <div className="card p-5">
-              <Titles eyebrow="Studio" title="Come say hi" subtext="Our Brooklyn studio is open by appointment — skincare consults, shade matching, and a very good pot of tea." />
+              <Titles eyebrow="Studio" title="Visit our Lekki studio" subtext="Open by appointment — product consults, shade matching, and pickup for Lagos orders. Zobo on the house." />
               <div className="mt-4 overflow-hidden rounded-2xl border border-line">
                 <div className="dot-grid flex h-40 items-center justify-center bg-surface-2">
                   <span className="stat-pill bg-surface">
-                    <FiMapPin size={12} className="text-accent" /> 24 Petal Lane
+                    <FiMapPin size={12} className="text-accent" /> Lekki Phase 1, Lagos
                   </span>
                 </div>
               </div>
@@ -221,7 +228,7 @@ const Contact = () => {
               <p className="label">Response time</p>
               <p className="mt-2 font-display text-3xl text-ink">~4 hrs</p>
               <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Average first reply during studio hours. Weekends are a little slower —
+                Average first reply during studio hours. Sundays are a little slower —
                 we&apos;re probably at the market.
               </p>
             </div>

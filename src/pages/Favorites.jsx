@@ -16,8 +16,8 @@ const Favorites = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Saved"
-          title="Your saved rituals"
-          description="Everything you've tucked away for later. Add the whole shelf to your bag when the moment feels right."
+          title="Your favorites"
+          description="Everything you've saved for later. Add the whole shelf to your bag when the moment feels right."
           crumbs={[{ label: "Home", href: "/" }, { label: "Saved" }]}
           actions={
             favoriteItems.length > 0 && (
@@ -41,7 +41,7 @@ const Favorites = () => {
             <div>
               <p className="font-display text-xl text-ink">Nothing saved yet</p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                Tap the heart on any ritual and it will wait for you right here.
+                Tap the heart on any product and it will wait for you right here.
               </p>
             </div>
             <Link href="/Shop" className="btn-primary">

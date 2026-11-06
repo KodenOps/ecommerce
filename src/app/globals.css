@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------
-   Bloom & Glow — theme tokens
+   QueenFizzie — theme tokens
    Light: warm blush paper, ink-plum type, rose accent.
    Dark:  deep plum canvas, luminous rose/violet accents.
    Every colour is an RGB triplet so Tailwind can apply opacity.
@@ -177,6 +177,13 @@
   .stat-pill {
     @apply inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3 py-1.5 text-xs font-medium text-ink-soft;
   }
+}
+
+/* ---------------------------------------------------------------
+   Loading splash: hidden before paint on repeat visits
+----------------------------------------------------------------*/
+html[data-booted="1"] .qf-splash {
+  display: none !important;
 }
 
 /* ---------------------------------------------------------------

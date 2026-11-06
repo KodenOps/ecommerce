@@ -5,8 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiHeart, FiPlus, FiStar } from "react-icons/fi";
 import { useStore } from "@/store/store";
-
-const formatMoney = (value) => `$${Number(value).toFixed(2).replace(/\.00$/, "")}`;
+import { formatNaira } from "@/lib/money";
 
 const ProductCard = ({ product, compact = false }) => {
   const { addToCart, toggleFavorite, isFavorite } = useStore();
@@ -100,9 +99,9 @@ const ProductCard = ({ product, compact = false }) => {
 
         <div className="mt-auto flex items-end justify-between pt-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-semibold text-ink">{formatMoney(product.price)}</span>
+            <span className="text-lg font-semibold text-ink">{formatNaira(product.price)}</span>
             {product.oldprice && (
-              <span className="text-xs text-muted line-through">{formatMoney(product.oldprice)}</span>
+              <span className="text-xs text-muted line-through">{formatNaira(product.oldprice)}</span>
             )}
           </div>
           <button

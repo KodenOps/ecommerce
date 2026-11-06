@@ -20,14 +20,14 @@ import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
 import { getProductById, products } from "@/data/products";
 import { useStore } from "@/store/store";
-
-const money = (value) => `$${Number(value).toFixed(2).replace(/\.00$/, "")}`;
+import { formatNaira } from "@/lib/money";
+import { FREE_DELIVERY_OVER } from "@/lib/pricing";
 
 const DETAILS = [
-  { label: "Formula", value: "Clean & cruelty-free" },
-  { label: "Scent family", value: "Floral · soft vanilla" },
-  { label: "Skin type", value: "All glow-levels welcome" },
-  { label: "Finish", value: "Luminous, never greasy" },
+  { label: "Authenticity", value: "100% Original" },
+  { label: "Trust", value: "Tested & trusted" },
+  { label: "Skin tone", value: "Made for melanin-rich skin" },
+  { label: "Dispatch", value: "Ships from Lekki, Lagos" },
 ];
 
 const ProductPreview = () => {
@@ -151,10 +151,10 @@ const ProductPreview = () => {
               <div>
                 <p className="label">Price</p>
                 <div className="mt-1 flex items-baseline gap-3">
-                  <span className="font-display text-3xl text-ink">{money(product.price)}</span>
+                  <span className="font-display text-3xl text-ink">{formatNaira(product.price)}</span>
                   {product.oldprice && (
                     <span className="text-sm text-muted line-through">
-                      {money(product.oldprice)}
+                      {formatNaira(product.oldprice)}
                     </span>
                   )}
                   {discount > 0 && (
@@ -189,7 +189,7 @@ const ProductPreview = () => {
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={handleAdd} className="btn-primary flex-1">
                 {added ? <FiCheck size={15} /> : <FiShoppingBag size={15} />}
-                {added ? "Added to bag" : `Add to bag · ${money(product.price * quantity)}`}
+                {added ? "Added to bag" : `Add to bag · ${formatNaira(product.price * quantity)}`}
               </button>
               <button
                 type="button"
@@ -225,11 +225,12 @@ const ProductPreview = () => {
 
             <div className="flex flex-col gap-2 rounded-2xl border border-line bg-surface-2/50 p-4 text-xs text-ink-soft">
               <span className="flex items-center gap-2">
-                <FiTruck size={13} className="text-accent" /> Free shipping over $75 · tracked
-                delivery
+                <FiTruck size={13} className="text-accent" /> Free delivery over{" "}
+                {formatNaira(FREE_DELIVERY_OVER)} · nationwide in 1–5 days
               </span>
               <span className="flex items-center gap-2">
-                <FiShield size={13} className="text-accent" /> 30-day returns, even if opened
+                <FiShield size={13} className="text-accent" /> 100% original · tested &amp;
+                trusted
               </span>
             </div>
           </div>

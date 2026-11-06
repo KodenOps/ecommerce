@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "bloom:theme";
+const STORAGE_KEY = "qf:theme";
 
 const ThemeContext = createContext({
   theme: "light",

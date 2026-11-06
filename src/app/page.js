@@ -8,7 +8,7 @@ import TopProduct from "@/components/sections/TopProduct";
 import Promosection from "@/components/sections/Promosection";
 
 /*
-  Bloom & Glow — home
+  QueenFizzie — home
   Hero → Shop by ritual → Bestsellers → Flash glow sale
 */
 export default function Home() {

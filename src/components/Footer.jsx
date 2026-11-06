@@ -1,14 +1,15 @@
 import React from "react";
 import Link from "next/link";
-import { FaFacebookF, FaInstagram, FaPinterestP } from "react-icons/fa";
+import { FaFacebookF, FaInstagram, FaTiktok } from "react-icons/fa";
 import { FiArrowRight, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
-import { GiDaisy } from "react-icons/gi";
+import { GiQueenCrown } from "react-icons/gi";
+import { STORE } from "@/data/nigeria";
 
 const COLUMNS = [
   {
     title: "Shop",
     links: [
-      { label: "All rituals", href: "/Shop" },
+      { label: "All products", href: "/Shop" },
       { label: "Skincare", href: "/Shop?category=Skincare" },
       { label: "Lips & blush", href: "/Shop?category=Lips%20%26%20Blush" },
       { label: "Body glow", href: "/Shop?category=Body%20Glow" },
@@ -20,7 +21,7 @@ const COLUMNS = [
     links: [
       { label: "Promos", href: "/Promos" },
       { label: "Orders", href: "/Orders" },
-      { label: "Saved rituals", href: "/Favorites" },
+      { label: "Favorites", href: "/Favorites" },
       { label: "Your bag", href: "/Cart" },
       { label: "Contact", href: "/Contact" },
     ],
@@ -28,11 +29,11 @@ const COLUMNS = [
   {
     title: "Care",
     links: [
-      { label: "Shipping & delivery", href: "/Contact" },
+      { label: "Delivery & shipping", href: "/Contact" },
       { label: "Returns", href: "/Contact" },
-      { label: "Ingredients", href: "/Contact" },
-      { label: "Stockists", href: "/Contact" },
-      { label: "Press", href: "/Contact" },
+      { label: "How payment works", href: "/Contact" },
+      { label: "Bulk & bridal orders", href: "/Contact" },
+      { label: "Admin panel", href: "/Admin" },
     ],
   },
 ];
@@ -48,21 +49,24 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-2.5">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accent to-violet text-accent-ink shadow-glow">
-                <GiDaisy size={20} />
+                <GiQueenCrown size={20} />
               </span>
               <div>
-                <p className="font-display text-lg font-semibold leading-none text-ink">Bloom</p>
+                <p className="font-display text-lg font-semibold leading-none text-ink">
+                  Queen<span className="text-accent">Fizzie</span>
+                </p>
                 <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.32em] text-accent">
-                  &amp; Glow
+                  Naija beauty
                 </p>
               </div>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">
-              Luminous skincare and quiet little luxuries, made for the ritual you
-              keep coming back to. Clean, cruelty-free, and a touch dreamy.
+              Original skincare, body rituals and scent, blended for melanin-rich
+              skin and shipped from Lekki, Lagos to every state in Nigeria.
+              100% original, tested &amp; trusted.
             </p>
             <div className="mt-5 flex items-center gap-2">
-              {[FaInstagram, FaPinterestP, FaFacebookF].map((Icon, index) => (
+              {[FaInstagram, FaTiktok, FaFacebookF].map((Icon, index) => (
                 <a
                   key={index}
                   href="#"
@@ -96,7 +100,7 @@ const Footer = () => {
           <div>
             <p className="label">The glow letter</p>
             <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-              Weekly notes on rituals, restocks, and members-only drops.
+              Restock alerts, new drops, and members-only Naija deals.
             </p>
             <form className="mt-4 flex flex-col gap-2" onSubmit={(event) => event.preventDefault()}>
               <div className="relative">
@@ -119,10 +123,10 @@ const Footer = () => {
             </form>
             <div className="mt-5 flex flex-col gap-1.5 text-xs text-muted">
               <span className="flex items-center gap-2">
-                <FiPhone size={13} /> +1 (555) 014-8820
+                <FiPhone size={13} /> {STORE.phone}
               </span>
               <span className="flex items-center gap-2">
-                <FiMapPin size={13} /> 24 Petal Lane, Brooklyn
+                <FiMapPin size={13} /> {STORE.address}
               </span>
             </div>
           </div>
@@ -131,7 +135,7 @@ const Footer = () => {
         <div className="divider my-8" />
 
         <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted sm:flex-row">
-          <p>© {new Date().getFullYear()} Bloom &amp; Glow Beauty Bar. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {STORE.name}. Made in Lagos, Nigeria.</p>
           <div className="flex items-center gap-5">
             <Link href="/Contact" className="transition-colors hover:text-accent">
               Privacy
@@ -140,7 +144,7 @@ const Footer = () => {
               Terms
             </Link>
             <Link href="/Contact" className="transition-colors hover:text-accent">
-              Accessibility
+              Delivery
             </Link>
           </div>
         </div>

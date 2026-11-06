@@ -14,8 +14,7 @@ import {
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import { FREE_DELIVERY_THRESHOLD, useStore } from "@/store/store";
-
-const money = (value) => `$${Number(value).toFixed(2)}`;
+import { formatNaira } from "@/lib/money";
 
 const Cart = () => {
   const {
@@ -38,10 +37,10 @@ const Cart = () => {
       <div className="flex flex-col gap-6">
         <PageHeader
           eyebrow="Your bag"
-          title={cartCount > 0 ? "Your glow bag" : "Your bag is having a quiet moment"}
+          title={cartCount > 0 ? "Your QueenFizzie bag" : "Your bag is having a quiet moment"}
           description={
             cartCount > 0
-              ? `${cartCount} ${cartCount === 1 ? "ritual" : "rituals"} waiting for you — free shipping unlocks at $${FREE_DELIVERY_THRESHOLD}.`
+              ? `${cartCount} ${cartCount === 1 ? "item" : "items"} waiting for you — free delivery unlocks at ${formatNaira(FREE_DELIVERY_THRESHOLD)}.`
               : "Nothing in here yet. Start with a bestseller and the rest tends to follow."
           }
           crumbs={[{ label: "Home", href: "/" }, { label: "Bag" }]}
@@ -62,8 +61,8 @@ const Cart = () => {
             <div>
               <p className="font-display text-xl text-ink">Your bag is empty</p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-                Our bestsellers are a gentle place to begin — serums, mists, and one
-                candle you&apos;ll keep re-lighting.
+                Start with our zobo serum, a body mist, or the shea glow oil — the
+                pieces our Lagos customers keep restocking.
               </p>
             </div>
             <Link href="/Shop" className="btn-primary">
@@ -79,11 +78,11 @@ const Cart = () => {
                   <FiTruck size={14} className="text-accent" />
                   {remaining > 0 ? (
                     <span>
-                      You&apos;re <strong className="text-ink">{money(remaining)}</strong> from free
-                      shipping
+                      You&apos;re <strong className="text-ink">{formatNaira(remaining)}</strong> from free
+                      delivery
                     </span>
                   ) : (
-                    <span className="text-accent">Free shipping unlocked — nicely done</span>
+                    <span className="text-accent">Free delivery unlocked — nicely done</span>
                   )}
                   <div className="ml-auto hidden w-32 overflow-hidden rounded-full bg-surface-2 sm:block">
                     <div
@@ -157,11 +156,11 @@ const Cart = () => {
 
                           <div className="text-right">
                             <p className="text-sm font-semibold text-ink">
-                              {money(item.price * item.qty)}
+                              {formatNaira(item.price * item.qty)}
                             </p>
                             {item.oldprice && (
                               <p className="text-[11px] text-muted line-through">
-                                {money(item.oldprice * item.qty)}
+                                {formatNaira(item.oldprice * item.qty)}
                               </p>
                             )}
                           </div>
@@ -182,24 +181,24 @@ const Cart = () => {
               <dl className="mt-4 flex flex-col gap-2.5 text-sm">
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Subtotal</dt>
-                  <dd className="font-medium text-ink">{money(subtotal)}</dd>
+                  <dd className="font-medium text-ink">{formatNaira(subtotal)}</dd>
                 </div>
                 {savings > 0 && (
                   <div className="flex justify-between">
                     <dt className="text-ink-soft">You save</dt>
-                    <dd className="font-medium text-accent">−{money(savings)}</dd>
+                    <dd className="font-medium text-accent">−{formatNaira(savings)}</dd>
                   </div>
                 )}
                 <div className="flex justify-between">
                   <dt className="text-ink-soft">Delivery</dt>
                   <dd className="font-medium text-ink">
-                    {delivery === 0 ? "Free" : money(delivery)}
+                    {delivery === 0 ? "Free" : formatNaira(delivery)}
                   </dd>
                 </div>
                 <div className="divider my-1" />
                 <div className="flex items-baseline justify-between">
                   <dt className="font-display text-base text-ink">Total</dt>
-                  <dd className="font-display text-2xl text-ink">{money(total)}</dd>
+                  <dd className="font-display text-2xl text-ink">{formatNaira(total)}</dd>
                 </div>
               </dl>
 
@@ -209,8 +208,8 @@ const Cart = () => {
               </Link>
 
               <div className="mt-4 flex flex-col gap-1.5 text-[11px] text-muted">
-                <span>Secure payment · Paystack supported</span>
-                <span>Free returns within 30 days</span>
+                <span>Bank transfer · receipt verified before dispatch</span>
+                <span>Nationwide delivery in 1–5 working days</span>
               </div>
             </aside>
           </div>

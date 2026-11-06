@@ -14,40 +14,49 @@ import Titles from "@/components/Titles";
 const CATEGORIES = [
   {
     name: "Skincare",
-    description: "Serums, creams, and balms for your daily glow ritual.",
+    description: "Zobo serums, black soap and creams for harmattan-proof glow.",
     icon: FiDroplet,
     tint: "from-accent/20 to-violet/10",
   },
   {
     name: "Mists & Toners",
-    description: "A spritz of calm, any hour of the day.",
+    description: "A spritz of calm for hot Lagos afternoons.",
     icon: FiWind,
     tint: "from-violet/20 to-accent/10",
   },
   {
     name: "Lips & Blush",
-    description: "Glossy smiles and flushed cheeks, naturally.",
+    description: "Hibiscus tints and nudes made for melanin-rich lips.",
     icon: FiHeart,
     tint: "from-accent/20 to-gold/10",
   },
   {
     name: "Body Glow",
-    description: "Shimmer, scrub, and self-care that lingers.",
+    description: "Shea and baobab shimmer for owambe nights.",
     icon: FiSun,
     tint: "from-gold/20 to-accent/10",
   },
   {
     name: "Scented Candles",
-    description: "Warm, quiet evenings in a single note.",
+    description: "Warm, quiet evenings after a loud day in the city.",
     icon: FiMoon,
     tint: "from-violet/20 to-surface-2",
   },
   {
     name: "Gifts & Sets",
-    description: "Curated boxes for the people you adore.",
+    description: "Curated boxes for bridal trains and best friends.",
     icon: FiGift,
     tint: "from-accent/20 to-violet/15",
   },
+];
+
+const TRUST_BADGES = [
+  "100% Original",
+  "Tested & Trusted",
+  "Nationwide Delivery",
+  "Verified Naija Brand",
+  "Pay on Delivery in Lagos",
+  "Real Customer Reviews",
 ];
 
 const Categories = () => {
@@ -56,7 +65,7 @@ const Categories = () => {
       <Titles
         eyebrow="Shop by ritual"
         title="Pick the mood, we'll bring the glow"
-        subtext="Six small worlds of beauty — each one built around the moment you want to make for yourself."
+        subtext="Six small worlds of beauty — each one built around the moment you want to make for yourself, shipped from Lagos."
         action={
           <Link href="/Shop" className="btn-secondary">
             View everything
@@ -100,13 +109,11 @@ const Categories = () => {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
-        {["Cruelty-free", "Clean ingredients", "Vegan options", "Paraben-free", "Recyclable glass"].map(
-          (badge) => (
-            <span key={badge} className="chip">
-              {badge}
-            </span>
-          )
-        )}
+        {TRUST_BADGES.map((badge) => (
+          <span key={badge} className="chip">
+            {badge}
+          </span>
+        ))}
       </div>
     </section>
   );

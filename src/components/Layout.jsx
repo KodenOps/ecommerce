@@ -15,10 +15,11 @@ import {
   FiCheckCircle,
   FiArrowRight,
 } from "react-icons/fi";
-import { GiDaisy } from "react-icons/gi";
+import { GiQueenCrown } from "react-icons/gi";
 import ThemeToggle from "./ThemeToggle";
 import Footer from "./Footer";
 import { useStore } from "@/store/store";
+import { formatNaira } from "@/lib/money";
 
 export const NAV_ITEMS = [
   { label: "Home", href: "/", icon: FiHome },
@@ -30,7 +31,7 @@ export const NAV_ITEMS = [
 
 const SIDE_LINKS = [
   ...NAV_ITEMS,
-  { label: "Saved", href: "/Favorites", icon: FiHeart },
+  { label: "Favorites", href: "/Favorites", icon: FiHeart },
   { label: "Your bag", href: "/Cart", icon: FiShoppingBag },
 ];
 
@@ -38,15 +39,15 @@ function BrandMark({ compact = false }) {
   return (
     <Link href="/" className="group flex items-center gap-2.5 select-none">
       <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accent to-violet text-accent-ink shadow-glow transition-transform duration-300 group-hover:scale-105">
-        <GiDaisy size={20} />
+        <GiQueenCrown size={20} />
       </span>
       <span className="flex flex-col leading-none">
         <span className="font-display text-lg font-semibold tracking-tight text-ink">
-          Bloom
+          Queen<span className="text-accent">Fizzie</span>
         </span>
         {!compact && (
-          <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.32em] text-accent">
-            &amp; Glow
+          <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.28em] text-accent">
+            Naija beauty
           </span>
         )}
       </span>
@@ -58,32 +59,24 @@ function Announcement() {
   return (
     <div className="relative overflow-hidden bg-ink text-canvas">
       <div className="shell flex h-9 items-center justify-center gap-3 text-[11px] font-medium uppercase tracking-[0.2em]">
-        <span className="hidden sm:inline opacity-70">Free shipping over $75</span>
+        <span className="hidden sm:inline opacity-70">Free delivery over ₦150,000</span>
         <span className="hidden sm:inline opacity-40">·</span>
-        <span className="opacity-90">Cruelty-free, always</span>
+        <span className="opacity-90">100% original · tested &amp; trusted</span>
         <span className="hidden md:inline opacity-40">·</span>
-        <span className="hidden md:inline opacity-70">New glow drops every Friday</span>
+        <span className="hidden md:inline opacity-70">Nationwide delivery from Lagos</span>
       </div>
     </div>
   );
 }
 
 function Header({ onOpenMenu, pathname }) {
-  const { cartCount, favorites } = useStore();
+  const { cartCount } = useStore();
 
   return (
     <header className="sticky top-0 z-40">
       <div className="glass border-b border-line/80">
         <div className="shell flex h-16 items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onOpenMenu}
-              className="btn-icon lg:hidden"
-              aria-label="Open menu"
-            >
-              <FiMenu size={18} />
-            </button>
+          <div className="flex min-w-0 items-center gap-3">
             <BrandMark />
           </div>
 
@@ -109,20 +102,15 @@ function Header({ onOpenMenu, pathname }) {
             })}
           </nav>
 
+          {/* Right side: account, bag, then the mobile menu button */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
             <Link
-              href="/Favorites"
-              className="btn-icon relative"
-              aria-label="Saved rituals"
-              title="Saved"
+              href="/Contact"
+              className="btn-icon hidden sm:inline-flex"
+              aria-label="Account and help"
+              title="Account"
             >
-              <FiHeart size={17} />
-              {favorites.length > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet px-1 text-[10px] font-bold text-white">
-                  {favorites.length}
-                </span>
-              )}
+              <FiUser size={17} />
             </Link>
             <Link
               href="/Cart"
@@ -137,14 +125,14 @@ function Header({ onOpenMenu, pathname }) {
                 </span>
               )}
             </Link>
-            <Link
-              href="/Contact"
-              className="btn-icon hidden sm:inline-flex"
-              aria-label="Account and help"
-              title="Account"
+            <button
+              type="button"
+              onClick={onOpenMenu}
+              className="btn-icon lg:hidden"
+              aria-label="Open menu"
             >
-              <FiUser size={17} />
-            </Link>
+              <FiMenu size={18} />
+            </button>
           </div>
         </div>
       </div>
@@ -159,7 +147,7 @@ function SideRail({ pathname }) {
     <aside className="hidden lg:block">
       <div className="sticky top-24 flex flex-col gap-6 pb-10">
         <div className="card p-5">
-          <p className="label">Clinic</p>
+          <p className="label">Menu</p>
           <nav className="mt-3 flex flex-col gap-1" aria-label="Sections">
             {SIDE_LINKS.map((item) => {
               const Icon = item.icon;
@@ -197,14 +185,14 @@ function SideRail({ pathname }) {
 
         <div className="card overflow-hidden">
           <div className="bg-gradient-to-br from-accent-soft via-surface-2 to-violet-soft p-5">
-            <p className="eyebrow">Glow club</p>
+            <p className="eyebrow">Queen&apos;s bag</p>
             <p className="mt-2 font-display text-lg leading-snug text-ink">
               Your bag, softly summarised.
             </p>
             <p className="mt-2 text-xs leading-relaxed text-ink-soft">
               {cartCount === 0
                 ? "Nothing in the bag yet — start with a bestseller."
-                : `${cartCount} ${cartCount === 1 ? "ritual" : "rituals"} · $${subtotal.toFixed(2)}`}
+                : `${cartCount} ${cartCount === 1 ? "item" : "items"} · ${formatNaira(subtotal)}`}
             </p>
             <Link href={cartCount === 0 ? "/Shop" : "/Cart"} className="btn-primary mt-4 w-full text-xs">
               {cartCount === 0 ? "Browse the shop" : "View your bag"}

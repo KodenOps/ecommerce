@@ -6,18 +6,26 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { getProductById, products } from "@/data/products";
+import {
+  DELIVERY_FEE,
+  FREE_DELIVERY_OVER,
+  deliveryFeeFor,
+} from "@/lib/pricing";
 
 const KEYS = {
-  cart: "bloom:cart",
-  favorites: "bloom:favorites",
-  orders: "bloom:orders",
+  cart: "qf:cart",
+  favorites: "qf:favorites",
+  orders: "qf:orders",
 };
 
-const DELIVERY_FEE = 6.5;
-const FREE_DELIVERY_OVER = 75;
+export const ORDER_STATUS = {
+  pending: "Confirming Payment",
+  confirmed: "Payment Confirmed",
+};
 
 function readStorage(key, fallback) {
   try {
@@ -57,7 +65,8 @@ const EMPTY_STORE = {
   clearCart: () => {},
   toggleFavorite: () => {},
   isFavorite: () => false,
-  placeOrder: () => null,
+  createOrder: async () => null,
+  syncOrderStatuses: async () => {},
 };
 
 const StoreContext = createContext(EMPTY_STORE);
@@ -68,6 +77,7 @@ export function StoreProvider({ children }) {
   const [orders, setOrders] = useState([]);
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState(null);
+  const ordersRef = useRef([]);
 
   useEffect(() => {
     setCart(readStorage(KEYS.cart, []));
@@ -75,6 +85,10 @@ export function StoreProvider({ children }) {
     setOrders(readStorage(KEYS.orders, []));
     setReady(true);
   }, []);
+
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
 
   useEffect(() => {
     if (ready) writeStorage(KEYS.cart, cart);
@@ -109,7 +123,7 @@ export function StoreProvider({ children }) {
         }
         return [...current, { id: product.id, qty: quantity }];
       });
-      notify(`${product.title} added to your glow bag`);
+      notify(`${product.title} added to your bag`);
     },
     [notify]
   );
@@ -134,10 +148,10 @@ export function StoreProvider({ children }) {
       const product = getProductById(Number(productId));
       setFavorites((current) => {
         if (current.includes(productId)) {
-          notify(`${product?.title ?? "Ritual"} removed from saved`);
+          notify(`${product?.title ?? "Product"} removed from favorites`);
           return current.filter((id) => id !== productId);
         }
-        notify(`${product?.title ?? "Ritual"} saved for later`);
+        notify(`${product?.title ?? "Product"} saved for later`);
         return [...current, productId];
       });
     },
@@ -149,9 +163,13 @@ export function StoreProvider({ children }) {
     [favorites]
   );
 
-  const placeOrder = useCallback(
-    (details = {}) => {
+  const createOrder = useCallback(
+    async (details = {}) => {
       if (!cart.length) return null;
+      if (!details.receipt?.dataUrl) {
+        throw new Error("Please upload your payment receipt before completing the order.");
+      }
+
       const lines = cart
         .map((line) => {
           const product = getProductById(line.id);
@@ -159,11 +177,32 @@ export function StoreProvider({ children }) {
         })
         .filter(Boolean);
 
-      const subtotal = lines.reduce((sum, line) => sum + line.price * line.qty, 0);
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer: details.customer ?? {},
+          items: cart.map((line) => ({ id: line.id, qty: line.qty })),
+          receipt: {
+            dataUrl: details.receipt.dataUrl,
+            name: details.receipt.name,
+            type: details.receipt.type,
+            size: details.receipt.size,
+          },
+        }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(payload.error || "We could not submit your order. Please try again.");
+      }
+
+      const created = payload.order;
       const order = {
-        id: `BG-${Date.now().toString().slice(-6)}`,
-        placedAt: new Date().toISOString(),
-        status: "Processing",
+        id: created.id,
+        placedAt: created.createdAt,
+        status: created.status,
         items: lines.map((line) => ({
           id: line.id,
           title: line.title,
@@ -171,11 +210,12 @@ export function StoreProvider({ children }) {
           qty: line.qty,
           image: line.image,
         })),
-        subtotal,
-        delivery: subtotal >= FREE_DELIVERY_OVER ? 0 : DELIVERY_FEE,
-        total: subtotal + (subtotal >= FREE_DELIVERY_OVER ? 0 : DELIVERY_FEE),
-        customer: details.customer ?? null,
-        payment: details.payment ?? "card",
+        subtotal: created.subtotal,
+        delivery: created.delivery,
+        total: created.total,
+        customer: created.customer,
+        payment: "Bank transfer",
+        receiptName: created.receipt?.name ?? details.receipt.name,
       };
 
       setOrders((current) => [order, ...current]);
@@ -184,6 +224,35 @@ export function StoreProvider({ children }) {
     },
     [cart]
   );
+
+  const syncOrderStatuses = useCallback(async () => {
+    const list = ordersRef.current;
+    if (!list.length) return;
+    const ids = list.map((order) => order.id).join(",");
+    try {
+      const response = await fetch(`/api/orders/status?ids=${encodeURIComponent(ids)}`);
+      if (!response.ok) return;
+      const payload = await response.json();
+      const statuses = new Map(
+        (payload.orders || []).map((order) => [order.id, order.status])
+      );
+      if (
+        list.some(
+          (order) => statuses.has(order.id) && statuses.get(order.id) !== order.status
+        )
+      ) {
+        setOrders((current) =>
+          current.map((order) =>
+            statuses.has(order.id) && statuses.get(order.id) !== order.status
+              ? { ...order, status: statuses.get(order.id) }
+              : order
+          )
+        );
+      }
+    } catch (error) {
+      /* offline or API unavailable — keep the local status */
+    }
+  }, []);
 
   const cartItems = useMemo(
     () =>
@@ -221,7 +290,7 @@ export function StoreProvider({ children }) {
     [cartItems]
   );
 
-  const delivery = subtotal === 0 || subtotal >= FREE_DELIVERY_OVER ? 0 : DELIVERY_FEE;
+  const delivery = deliveryFeeFor(subtotal);
 
   const value = useMemo(
     () => ({
@@ -243,7 +312,8 @@ export function StoreProvider({ children }) {
       clearCart,
       toggleFavorite,
       isFavorite,
-      placeOrder,
+      createOrder,
+      syncOrderStatuses,
       catalog: products,
     }),
     [
@@ -264,7 +334,8 @@ export function StoreProvider({ children }) {
       clearCart,
       toggleFavorite,
       isFavorite,
-      placeOrder,
+      createOrder,
+      syncOrderStatuses,
     ]
   );
 
@@ -276,5 +347,6 @@ export function useStore() {
 }
 
 export const FREE_DELIVERY_THRESHOLD = FREE_DELIVERY_OVER;
+export const STANDARD_DELIVERY_FEE = DELIVERY_FEE;
 
 export default StoreProvider;
