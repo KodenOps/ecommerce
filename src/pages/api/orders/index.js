@@ -1,98 +1,99 @@
-import { getProductById } from "@/data/products";
-import { deliveryFeeFor } from "@/lib/pricing";
 import {
-  createOrderId,
-  readOrders,
-  saveReceipt,
-  writeOrders,
-} from "@/lib/ordersStore";
+  allowMethods,
+  dbError,
+  readInt,
+  requireSession,
+  sameOrigin,
+  sendJson,
+} from "@/lib/apiHelpers";
+import { ORDER_SELECT, toOrder } from "@/lib/productMapper";
+import { removeObject, uploadDataUrl } from "@/lib/supabase/storage";
+import { cleanMultiline, cleanText, normalizePhone } from "@/lib/validation";
 
 export const config = {
-  api: {
-    bodyParser: { sizeLimit: "8mb" },
-  },
+  api: { bodyParser: { sizeLimit: "9mb" } },
 };
 
-const clean = (value, max = 160) => String(value ?? "").trim().slice(0, max);
+export default async function handler(req, res) {
+  if (!allowMethods(req, res, ["GET", "POST"])) return;
 
-export default function handler(req, res) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+  const session = await requireSession(req, res);
+  if (!session) return;
+  const { supabase, profile } = session;
+
+  if (req.method === "GET") {
+    let query = supabase
+      .from("orders")
+      .select(ORDER_SELECT)
+      .order("placed_at", { ascending: false })
+      .limit(50);
+    if (profile.role !== "ADMIN") query = query.eq("user_id", profile.id);
+
+    const { data, error } = await query;
+    if (error) return dbError(res, error, "We could not load your orders.");
+    return sendJson(res, 200, { orders: (data || []).map(toOrder) });
   }
 
-  try {
-    const body = req.body ?? {};
-    const customer = {
-      name: clean(body.customer?.name, 80),
-      email: clean(body.customer?.email, 120),
-      phone: clean(body.customer?.phone, 30),
-      address: clean(body.customer?.address, 200),
-      city: clean(body.customer?.city, 80),
-      state: clean(body.customer?.state, 80),
-      notes: clean(body.customer?.notes, 300),
-    };
+  if (!sameOrigin(req)) return sendJson(res, 403, { error: "Request blocked." });
 
-    if (!customer.name || !customer.address || !customer.city || !customer.state) {
-      return res.status(400).json({ error: "Delivery details are incomplete." });
-    }
+  const body = req.body || {};
+  const items = (Array.isArray(body.items) ? body.items : [])
+    .map((item) => ({
+      product_id: String(item?.productId || item?.product_id || item?.id || ""),
+      qty: Math.min(20, Math.max(1, readInt(item?.qty, 1))),
+    }))
+    .filter((item) => item.product_id);
 
-    const items = Array.isArray(body.items) ? body.items : [];
-    const lines = items
-      .map((item) => {
-        const product = getProductById(Number(item?.id));
-        const qty = Math.min(20, Math.max(1, Number(item?.qty) || 1));
-        return product ? { product, qty } : null;
-      })
-      .filter(Boolean);
+  if (!items.length) return sendJson(res, 400, { error: "Your bag is empty." });
 
-    if (!lines.length) {
-      return res.status(400).json({ error: "Your bag is empty." });
-    }
+  const phone = normalizePhone(body.customer?.phone || profile.phone);
+  const customer = {
+    name: cleanText(body.customer?.name, 80) || `${profile.first_name} ${profile.last_name}`.trim(),
+    email: cleanText(body.customer?.email, 120) || profile.email,
+    phone: phone || "",
+    address: cleanText(body.customer?.address, 200),
+    city: cleanText(body.customer?.city, 80),
+    state: cleanText(body.customer?.state, 80),
+    notes: cleanMultiline(body.customer?.notes, 300),
+  };
 
-    const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.qty, 0);
-    const delivery = deliveryFeeFor(subtotal);
-
-    const orders = readOrders();
-    const id = createOrderId(orders);
-    const storedReceipt = saveReceipt(id, body.receipt?.dataUrl);
-
-    if (!storedReceipt) {
-      return res.status(400).json({
-        error: "Please upload a clear image or PDF of your payment receipt (max 5MB).",
-      });
-    }
-
-    const order = {
-      id,
-      createdAt: new Date().toISOString(),
-      status: "Confirming Payment",
-      confirmedAt: null,
-      customer,
-      items: lines.map(({ product, qty }) => ({
-        id: product.id,
-        title: product.title,
-        price: product.price,
-        qty,
-        image: product.image,
-      })),
-      subtotal,
-      delivery,
-      total: subtotal + delivery,
-      payment: "Bank transfer",
-      receipt: {
-        ...storedReceipt,
-        name: clean(body.receipt?.name, 120) || storedReceipt.file,
-      },
-    };
-
-    orders.unshift(order);
-    writeOrders(orders);
-
-    return res.status(201).json({ order });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ error: "We could not save your order. Please try again." });
+  if (!customer.name || !customer.phone || !customer.address || !customer.city || !customer.state) {
+    return sendJson(res, 400, {
+      error: "Name, phone, address, city and state are needed to place this order.",
+    });
   }
+
+  const uploaded = await uploadDataUrl(supabase, {
+    bucket: "receipts",
+    userId: profile.id,
+    dataUrl: body.receipt?.dataUrl,
+    name: body.receipt?.name || "receipt",
+    options: { maxBytes: 8 * 1024 * 1024, allowPdf: true },
+  });
+
+  if (!uploaded) {
+    return sendJson(res, 400, {
+      error: "Please upload a clear image or PDF of your payment receipt (max 8MB).",
+    });
+  }
+
+  const { data, error } = await supabase.rpc("place_order", {
+    p_customer: customer,
+    p_items: items,
+    p_promo: cleanText(body.promoCode, 24) || null,
+    p_receipt: {
+      path: uploaded.path,
+      name: uploaded.name,
+      mime: uploaded.mime,
+      size: uploaded.size,
+    },
+  });
+
+  if (error) {
+    await removeObject(supabase, "receipts", uploaded.path);
+    return dbError(res, error, "We could not save your order. Please try again.");
+  }
+
+  const order = toOrder({ ...data.order, order_items: data.items, order_events: [] });
+  return sendJson(res, 201, { order });
 }

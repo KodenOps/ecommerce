@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import {
   FiArrowLeft,
   FiCheck,
@@ -18,10 +17,11 @@ import {
 } from "react-icons/fi";
 import Layout from "@/components/Layout";
 import ProductCard from "@/components/ProductCard";
-import { getProductById, products } from "@/data/products";
 import { useStore } from "@/store/store";
 import { formatNaira } from "@/lib/money";
 import { FREE_DELIVERY_OVER } from "@/lib/pricing";
+import { createServerSupabase } from "@/lib/supabase/server";
+import { toStoreProduct } from "@/lib/productMapper";
 
 const DETAILS = [
   { label: "Authenticity", value: "100% Original" },
@@ -30,15 +30,25 @@ const DETAILS = [
   { label: "Dispatch", value: "Ships from Lekki, Lagos" },
 ];
 
-const ProductPreview = () => {
-  const router = useRouter();
-  const { addToCart, toggleFavorite, isFavorite } = useStore();
+export async function getServerSideProps(ctx) {
+  const id = typeof ctx.query.id === "string" ? ctx.query.id : "";
+  if (!id) return { props: { initialProduct: null } };
+
+  try {
+    const supabase = createServerSupabase(ctx.req, ctx.res);
+    const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+    return { props: { initialProduct: data ? toStoreProduct(data) : null } };
+  } catch (error) {
+    return { props: { initialProduct: null } };
+  }
+}
+
+export default function ProductPreview({ initialProduct }) {
+  const { addToCart, toggleFavorite, isFavorite, catalog, catalogLoading } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const idRaw = router.query?.id;
-  const id = idRaw != null ? Number(Array.isArray(idRaw) ? idRaw[0] : idRaw) : NaN;
-  const product = Number.isFinite(id) ? getProductById(id) : null;
+  const product = initialProduct || catalog.find((item) => item.id === initialProduct?.id) || null;
 
   if (!product) {
     return (
@@ -48,10 +58,13 @@ const ProductPreview = () => {
             <FiShoppingBag size={26} />
           </span>
           <div>
-            <h1 className="font-display text-2xl text-ink">This ritual has wandered off</h1>
+            <h1 className="font-display text-2xl text-ink">
+              {catalogLoading ? "Fetching this ritual…" : "This ritual has wandered off"}
+            </h1>
             <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">
-              The piece you&apos;re looking for isn&apos;t here — but the shelf is full of good
-              company.
+              {catalogLoading
+                ? "One moment while we open the shelf."
+                : "The piece you're looking for isn't here — but the shelf is full of good company."}
             </p>
           </div>
           <Link href="/Shop" className="btn-primary">
@@ -66,7 +79,8 @@ const ProductPreview = () => {
     ? Math.round(((product.oldprice - product.price) / product.oldprice) * 100)
     : 0;
   const saved = isFavorite(product.id);
-  const related = products.filter((item) => item.id !== product.id).slice(0, 4);
+  const soldOut = product.stock <= 0;
+  const related = catalog.filter((item) => item.id !== product.id).slice(0, 4);
 
   const handleAdd = () => {
     addToCart(product.id, quantity);
@@ -113,30 +127,29 @@ const ProductPreview = () => {
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {[0, 1, 2].map((offset) => {
-                const image = products[(product.id + offset) % products.length]?.image;
-                return (
-                  <div
-                    key={offset}
-                    className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2"
-                  >
-                    {image && (
-                      <Image src={image} alt="" fill sizes="120px" className="object-cover opacity-90" />
-                    )}
-                  </div>
-                );
-              })}
+              {related.slice(0, 3).map((item) => (
+                <div key={item.id} className="relative aspect-square overflow-hidden rounded-2xl border border-line bg-surface-2">
+                  <Image src={item.image} alt={item.title} fill sizes="120px" className="object-cover opacity-90" />
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="eyebrow">{product.category}</span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2.5 py-1 text-[11px] font-semibold text-gold">
                   <FiStar size={11} fill="currentColor" />
-                  {product.rating?.rate?.toFixed(1) ?? "4.8"}
+                  {product.rating?.rate?.toFixed?.(1) ?? "4.8"}
                   <span className="text-muted">({product.rating?.count ?? 0})</span>
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    soldOut ? "bg-accent-soft text-accent" : "bg-surface-2 text-ink-soft"
+                  }`}
+                >
+                  {soldOut ? "Sold out" : `${product.stock} in stock`}
                 </span>
               </div>
               <h1 className="mt-2 font-display text-3xl leading-tight text-ink sm:text-4xl">
@@ -153,9 +166,7 @@ const ProductPreview = () => {
                 <div className="mt-1 flex items-baseline gap-3">
                   <span className="font-display text-3xl text-ink">{formatNaira(product.price)}</span>
                   {product.oldprice && (
-                    <span className="text-sm text-muted line-through">
-                      {formatNaira(product.oldprice)}
-                    </span>
+                    <span className="text-sm text-muted line-through">{formatNaira(product.oldprice)}</span>
                   )}
                   {discount > 0 && (
                     <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-bold text-accent">
@@ -177,7 +188,7 @@ const ProductPreview = () => {
                 <span className="w-6 text-center text-sm font-semibold tabular-nums">{quantity}</span>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => Math.min(20, q + 1))}
+                  onClick={() => setQuantity((q) => Math.min(Math.max(1, product.stock || 1), q + 1))}
                   className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
                   aria-label="Increase quantity"
                 >
@@ -187,9 +198,18 @@ const ProductPreview = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={handleAdd} className="btn-primary flex-1">
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={soldOut}
+                className="btn-primary flex-1"
+              >
                 {added ? <FiCheck size={15} /> : <FiShoppingBag size={15} />}
-                {added ? "Added to bag" : `Add to bag · ${formatNaira(product.price * quantity)}`}
+                {soldOut
+                  ? "Sold out"
+                  : added
+                  ? "Added to bag"
+                  : `Add to bag · ${formatNaira(product.price * quantity)}`}
               </button>
               <button
                 type="button"
@@ -229,32 +249,31 @@ const ProductPreview = () => {
                 {formatNaira(FREE_DELIVERY_OVER)} · nationwide in 1–5 days
               </span>
               <span className="flex items-center gap-2">
-                <FiShield size={13} className="text-accent" /> 100% original · tested &amp;
-                trusted
+                <FiShield size={13} className="text-accent" /> 100% original · tested &amp; trusted
               </span>
             </div>
           </div>
         </div>
 
-        <section>
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <span className="eyebrow">Pairs nicely</span>
-              <h2 className="mt-1 font-display text-2xl text-ink">Complete the ritual</h2>
+        {related.length > 0 && (
+          <section>
+            <div className="flex items-end justify-between gap-4">
+              <div>
+                <span className="eyebrow">Pairs nicely</span>
+                <h2 className="mt-1 font-display text-2xl text-ink">Complete the ritual</h2>
+              </div>
+              <Link href="/Shop" className="btn-ghost text-xs">
+                All rituals
+              </Link>
             </div>
-            <Link href="/Shop" className="btn-ghost text-xs">
-              All rituals
-            </Link>
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-            {related.map((item) => (
-              <ProductCard key={item.id} product={item} compact />
-            ))}
-          </div>
-        </section>
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              {related.map((item) => (
+                <ProductCard key={item.id} product={item} compact />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </Layout>
   );
-};
-
-export default ProductPreview;
+}

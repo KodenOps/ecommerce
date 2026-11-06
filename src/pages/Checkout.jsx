@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FiAlertCircle,
@@ -13,6 +13,7 @@ import {
   FiFileText,
   FiLock,
   FiShoppingBag,
+  FiTag,
   FiUploadCloud,
   FiX,
 } from "react-icons/fi";
@@ -21,6 +22,13 @@ import PageHeader from "@/components/PageHeader";
 import { useStore } from "@/store/store";
 import { formatNaira } from "@/lib/money";
 import { NIGERIAN_STATES, STORE } from "@/data/nigeria";
+import { deliveryFeeFor } from "@/lib/pricing";
+import { statusLabel } from "@/lib/status";
+import { userPageProps } from "@/lib/routeGuards";
+
+export async function getServerSideProps(ctx) {
+  return userPageProps(ctx, { fallback: "/Checkout" });
+}
 
 const STEPS = [
   { id: 1, label: "Delivery" },
@@ -28,7 +36,7 @@ const STEPS = [
   { id: 3, label: "Review" },
 ];
 
-const MAX_RECEIPT_BYTES = 5 * 1024 * 1024;
+const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
 const ALLOWED_RECEIPT_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
 
 const EMPTY_FORM = {
@@ -41,8 +49,8 @@ const EMPTY_FORM = {
   notes: "",
 };
 
-const Checkout = () => {
-  const { cartItems, cartCount, subtotal, delivery, total, createOrder } = useStore();
+export default function Checkout() {
+  const { cartItems, cartCount, subtotal, createOrder } = useStore();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(EMPTY_FORM);
   const [receipt, setReceipt] = useState(null);
@@ -51,7 +59,70 @@ const Checkout = () => {
   const [submitting, setSubmitting] = useState(false);
   const [placed, setPlaced] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+  const [promo, setPromo] = useState(null);
+  const [promoState, setPromoState] = useState({ loading: false, error: "", message: "" });
   const fileInputRef = useRef(null);
+  const promoCodeRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/profile", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!payload || cancelled) return;
+        const address = (payload.addresses || []).find((item) => item.isDefault) || payload.addresses?.[0];
+        setForm((current) => ({
+          name: current.name || payload.user?.fullName || "",
+          email: current.email || payload.user?.email || "",
+          phone: current.phone || payload.user?.phone || "",
+          address: current.address || address?.line1 || "",
+          city: current.city || address?.city || "",
+          state: current.state || address?.state || "",
+          notes: current.notes,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const discount = promo?.discount || 0;
+  const discountedSubtotal = Math.max(0, subtotal - discount);
+  const delivery = cartCount === 0 ? 0 : deliveryFeeFor(discountedSubtotal);
+  const payable = discountedSubtotal + delivery;
+
+  // Keep the discount honest when the bag changes.
+  useEffect(() => {
+    const code = promoCodeRef.current;
+    if (!code || subtotal <= 0) return;
+    let cancelled = false;
+    fetch("/api/promos/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, subtotal }),
+    })
+      .then((response) => response.json())
+      .then((payload) => {
+        if (cancelled) return;
+        if (payload.promo?.valid) {
+          setPromo({
+            code: payload.promo.code,
+            discount: payload.promo.discount,
+            description: payload.promo.description,
+          });
+        } else {
+          promoCodeRef.current = null;
+          setPromo(null);
+          setPromoState({ loading: false, error: "", message: "" });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [subtotal]);
 
   const update = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -63,30 +134,27 @@ const Checkout = () => {
     const file = event.target.files?.[0];
     setReceiptError("");
     setSubmitError("");
-
     if (!file) return;
 
     if (!ALLOWED_RECEIPT_TYPES.includes(file.type)) {
       setReceipt(null);
-      setReceiptError("Upload a PNG, JPG or PDF receipt.");
+      setReceiptError("Upload a PNG, JPG, WebP or PDF receipt.");
       return;
     }
-
     if (file.size > MAX_RECEIPT_BYTES) {
       setReceipt(null);
-      setReceiptError("That file is too large. Please upload a receipt under 5MB.");
+      setReceiptError("That file is too large. Please upload a receipt under 8MB.");
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = () =>
       setReceipt({
         dataUrl: String(reader.result),
         name: file.name,
         type: file.type,
         size: file.size,
       });
-    };
     reader.onerror = () => {
       setReceipt(null);
       setReceiptError("We could not read that file. Please try another one.");
@@ -98,6 +166,50 @@ const Checkout = () => {
     setReceipt(null);
     setReceiptError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const applyPromo = async () => {
+    const code = promoInput.trim();
+    if (!code) return;
+    setPromoState({ loading: true, error: "", message: "" });
+    try {
+      const response = await fetch("/api/promos/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setPromoState({ loading: false, error: payload.error || "We could not check that code.", message: "" });
+        return;
+      }
+      if (!payload.promo?.valid) {
+        setPromo(null);
+        promoCodeRef.current = null;
+        setPromoState({ loading: false, error: payload.promo?.reason || "That code is not valid.", message: "" });
+        return;
+      }
+      promoCodeRef.current = payload.promo.code;
+      setPromo({
+        code: payload.promo.code,
+        discount: payload.promo.discount,
+        description: payload.promo.description,
+      });
+      setPromoState({
+        loading: false,
+        error: "",
+        message: `${payload.promo.code} applied — you save ${formatNaira(payload.promo.discount)}.`,
+      });
+    } catch (error) {
+      setPromoState({ loading: false, error: "We could not check that code.", message: "" });
+    }
+  };
+
+  const removePromo = () => {
+    promoCodeRef.current = null;
+    setPromo(null);
+    setPromoInput("");
+    setPromoState({ loading: false, error: "", message: "" });
   };
 
   const copyAccountNumber = async () => {
@@ -115,7 +227,7 @@ const Checkout = () => {
     setSubmitting(true);
     setSubmitError("");
     try {
-      const order = await createOrder({ customer: form, receipt });
+      const order = await createOrder({ customer: form, receipt, promoCode: promo?.code });
       if (order) setPlaced(order);
     } catch (error) {
       setSubmitError(error.message || "We could not submit your order. Please try again.");
@@ -127,59 +239,63 @@ const Checkout = () => {
   if (placed) {
     return (
       <Layout>
-        <div className="flex flex-col gap-6">
-          <div className="card relative overflow-hidden p-8 text-center sm:p-12">
-            <div className="aurora -top-16 left-1/2 h-56 w-56 -translate-x-1/2 bg-accent/30" />
-            <div className="relative mx-auto flex max-w-md flex-col items-center">
-              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent shadow-soft">
-                <FiClock size={28} />
-              </span>
-              <h1 className="mt-5 font-display text-3xl text-ink">Order received, Queen</h1>
-              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-                Receipt uploaded for order <strong className="text-ink">{placed.id}</strong>.
-                Our team is verifying your transfer now.
-              </p>
+        <div className="card relative overflow-hidden p-8 text-center sm:p-12">
+          <div className="aurora -top-16 left-1/2 h-56 w-56 -translate-x-1/2 bg-accent/30" />
+          <div className="relative mx-auto flex max-w-md flex-col items-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-soft text-accent shadow-soft">
+              <FiClock size={28} />
+            </span>
+            <h1 className="mt-5 font-display text-3xl text-ink">Order received, Queen</h1>
+            <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              Receipt uploaded for order <strong className="text-ink">{placed.reference}</strong>.
+              Our team is verifying your transfer now.
+            </p>
 
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-xs font-semibold text-gold">
-                <FiClock size={13} /> Confirming Payment
-              </span>
+            <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-4 py-1.5 text-xs font-semibold text-gold">
+              <FiClock size={13} /> {statusLabel(placed.status)}
+            </span>
 
-              <div className="mt-6 w-full rounded-2xl border border-line bg-surface-2 p-4 text-left">
-                <div className="flex justify-between text-sm">
-                  <span className="text-ink-soft">Items</span>
-                  <span className="font-medium text-ink">
-                    {placed.items.reduce((sum, item) => sum + item.qty, 0)}
-                  </span>
-                </div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-ink-soft">Payment</span>
-                  <span className="font-medium text-ink">Bank transfer</span>
-                </div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-ink-soft">Total</span>
-                  <span className="font-semibold text-ink">{formatNaira(placed.total)}</span>
-                </div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-ink-soft">Deliver to</span>
-                  <span className="max-w-[60%] text-right font-medium text-ink">
-                    {placed.customer?.city}, {placed.customer?.state}
-                  </span>
-                </div>
+            <div className="mt-6 w-full rounded-2xl border border-line bg-surface-2 p-4 text-left">
+              <div className="flex justify-between text-sm">
+                <span className="text-ink-soft">Items</span>
+                <span className="font-medium text-ink">
+                  {placed.items.reduce((sum, item) => sum + item.qty, 0)}
+                </span>
               </div>
-
-              <p className="mt-4 text-xs leading-relaxed text-muted">
-                Your status stays <strong className="text-ink">Confirming Payment</strong> until
-                the transfer is approved. You can follow it on your Orders page.
-              </p>
-
-              <div className="mt-7 flex w-full flex-col gap-2 sm:flex-row">
-                <Link href="/Orders" className="btn-primary flex-1">
-                  Track my order
-                </Link>
-                <Link href="/Shop" className="btn-secondary flex-1">
-                  Keep shopping
-                </Link>
+              {placed.discount > 0 && (
+                <div className="mt-2 flex justify-between text-sm">
+                  <span className="text-ink-soft">Promo ({placed.promoCode})</span>
+                  <span className="font-medium text-accent">−{formatNaira(placed.discount)}</span>
+                </div>
+              )}
+              <div className="mt-2 flex justify-between text-sm">
+                <span className="text-ink-soft">Payment</span>
+                <span className="font-medium text-ink">Bank transfer</span>
               </div>
+              <div className="mt-2 flex justify-between text-sm">
+                <span className="text-ink-soft">Total</span>
+                <span className="font-semibold text-ink">{formatNaira(placed.total)}</span>
+              </div>
+              <div className="mt-2 flex justify-between text-sm">
+                <span className="text-ink-soft">Deliver to</span>
+                <span className="max-w-[60%] text-right font-medium text-ink">
+                  {placed.customer?.city}, {placed.customer?.state}
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              Your status stays <strong className="text-ink">{statusLabel(placed.status)}</strong> until
+              the transfer is approved. You can follow it on your Orders page.
+            </p>
+
+            <div className="mt-7 flex w-full flex-col gap-2 sm:flex-row">
+              <Link href="/Orders" className="btn-primary flex-1">
+                Track my order
+              </Link>
+              <Link href="/Shop" className="btn-secondary flex-1">
+                Keep shopping
+              </Link>
             </div>
           </div>
         </div>
@@ -267,9 +383,7 @@ const Checkout = () => {
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <label htmlFor="name" className="label">
-                      Full name
-                    </label>
+                    <label htmlFor="name" className="label">Full name</label>
                     <input
                       id="name"
                       value={form.name}
@@ -280,9 +394,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="phone" className="label">
-                      Phone (for delivery)
-                    </label>
+                    <label htmlFor="phone" className="label">Phone (for delivery)</label>
                     <input
                       id="phone"
                       type="tel"
@@ -294,9 +406,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="email" className="label">
-                      Email (optional)
-                    </label>
+                    <label htmlFor="email" className="label">Email (optional)</label>
                     <input
                       id="email"
                       type="email"
@@ -308,9 +418,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="address" className="label">
-                      Street address
-                    </label>
+                    <label htmlFor="address" className="label">Street address</label>
                     <input
                       id="address"
                       value={form.address}
@@ -321,9 +429,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="city" className="label">
-                      City / town
-                    </label>
+                    <label htmlFor="city" className="label">City / town</label>
                     <input
                       id="city"
                       value={form.city}
@@ -334,9 +440,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="state" className="label">
-                      State
-                    </label>
+                    <label htmlFor="state" className="label">State</label>
                     <select
                       id="state"
                       value={form.state}
@@ -346,16 +450,12 @@ const Checkout = () => {
                     >
                       <option value="">Select your state</option>
                       {NIGERIAN_STATES.map((state) => (
-                        <option key={state} value={state}>
-                          {state}
-                        </option>
+                        <option key={state} value={state}>{state}</option>
                       ))}
                     </select>
                   </div>
                   <div className="sm:col-span-2">
-                    <label htmlFor="notes" className="label">
-                      Delivery notes (optional)
-                    </label>
+                    <label htmlFor="notes" className="label">Delivery notes (optional)</label>
                     <input
                       id="notes"
                       value={form.notes}
@@ -413,8 +513,52 @@ const Checkout = () => {
                   <div className="divider my-3" />
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-ink-soft">Amount to transfer</span>
-                    <span className="font-display text-xl text-ink">{formatNaira(total)}</span>
+                    <span className="font-display text-xl text-ink">{formatNaira(payable)}</span>
                   </div>
+                </div>
+
+                <div className="rounded-2xl border border-line bg-surface-2/60 p-4">
+                  <p className="label mb-2 flex items-center gap-1.5">
+                    <FiTag size={12} className="text-accent" /> Promo code
+                  </p>
+                  {promo ? (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft/50 px-3 py-2">
+                      <span className="min-w-0 text-xs text-ink">
+                        <strong className="font-mono">{promo.code}</strong> · −{formatNaira(promo.discount)}
+                      </span>
+                      <button type="button" onClick={removePromo} className="text-accent" aria-label="Remove promo">
+                        <FiX size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        value={promoInput}
+                        onChange={(event) => setPromoInput(event.target.value.toUpperCase())}
+                        className="field flex-1 uppercase"
+                        placeholder="GLOW10"
+                        aria-label="Promo code"
+                      />
+                      <button
+                        type="button"
+                        onClick={applyPromo}
+                        disabled={promoState.loading || !promoInput.trim()}
+                        className="btn-secondary px-4 text-xs"
+                      >
+                        {promoState.loading ? "Checking…" : "Apply"}
+                      </button>
+                    </div>
+                  )}
+                  {promoState.error && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+                      <FiAlertCircle size={12} /> {promoState.error}
+                    </p>
+                  )}
+                  {promoState.message && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-accent">
+                      <FiCheckCircle size={12} /> {promoState.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -426,11 +570,7 @@ const Checkout = () => {
                           <FiFileText size={22} className="text-accent" />
                         ) : (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={receipt.dataUrl}
-                            alt="Uploaded receipt preview"
-                            className="h-full w-full object-cover"
-                          />
+                          <img src={receipt.dataUrl} alt="Uploaded receipt preview" className="h-full w-full object-cover" />
                         )}
                       </span>
                       <span className="min-w-0 flex-1">
@@ -441,12 +581,7 @@ const Checkout = () => {
                           {receipt.name} · {(receipt.size / 1024).toFixed(0)} KB
                         </span>
                       </span>
-                      <button
-                        type="button"
-                        onClick={removeReceipt}
-                        className="btn-icon h-8 w-8"
-                        aria-label="Remove receipt"
-                      >
+                      <button type="button" onClick={removeReceipt} className="btn-icon h-8 w-8" aria-label="Remove receipt">
                         <FiX size={14} />
                       </button>
                     </div>
@@ -458,10 +593,8 @@ const Checkout = () => {
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent">
                         <FiUploadCloud size={19} />
                       </span>
-                      <span className="text-sm font-semibold text-ink">
-                        Tap to upload your receipt
-                      </span>
-                      <span className="text-[11px] text-muted">PNG, JPG or PDF · max 5MB</span>
+                      <span className="text-sm font-semibold text-ink">Tap to upload your receipt</span>
+                      <span className="text-[11px] text-muted">PNG, JPG, WebP or PDF · max 8MB</span>
                       <input
                         ref={fileInputRef}
                         id="receipt"
@@ -481,16 +614,11 @@ const Checkout = () => {
 
                 <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-[11px] text-ink-soft">
                   <FiLock size={13} className="text-accent" />
-                  Your receipt is only used to confirm this payment.
+                  Your receipt is stored privately in Supabase and only admins can open it.
                 </div>
 
                 <div className="mt-1 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    disabled={!receipt}
-                    className="btn-primary"
-                  >
+                  <button type="button" onClick={() => setStep(3)} disabled={!receipt} className="btn-primary">
                     Review order
                     <FiArrowRight size={15} />
                   </button>
@@ -527,11 +655,7 @@ const Checkout = () => {
                       <br />
                       {form.phone}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="mt-2 text-[11px] font-semibold text-accent hover:opacity-70"
-                    >
+                    <button type="button" onClick={() => setStep(1)} className="mt-2 text-[11px] font-semibold text-accent hover:opacity-70">
                       Edit
                     </button>
                   </div>
@@ -540,12 +664,9 @@ const Checkout = () => {
                     <p className="mt-1.5 text-sm font-medium text-ink">Bank transfer</p>
                     <p className="text-xs leading-relaxed text-ink-soft">
                       {receipt ? `Receipt attached · ${receipt.name}` : "No receipt uploaded yet."}
+                      {promo ? ` · ${promo.code}` : ""}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setStep(2)}
-                      className="mt-2 text-[11px] font-semibold text-accent hover:opacity-70"
-                    >
+                    <button type="button" onClick={() => setStep(2)} className="mt-2 text-[11px] font-semibold text-accent hover:opacity-70">
                       Change
                     </button>
                   </div>
@@ -572,13 +693,8 @@ const Checkout = () => {
                 )}
 
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={handleCompleteOrder}
-                    disabled={!receipt || submitting}
-                    className="btn-primary"
-                  >
-                    {submitting ? "Submitting…" : `Complete order · ${formatNaira(total)}`}
+                  <button type="button" onClick={handleCompleteOrder} disabled={!receipt || submitting} className="btn-primary">
+                    {submitting ? "Submitting…" : `Complete order · ${formatNaira(payable)}`}
                   </button>
                   <button type="button" onClick={() => setStep(2)} className="btn-secondary">
                     Back
@@ -614,6 +730,12 @@ const Checkout = () => {
                 <dt className="text-ink-soft">Subtotal</dt>
                 <dd className="font-medium text-ink">{formatNaira(subtotal)}</dd>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-ink-soft">Promo · {promo.code}</dt>
+                  <dd className="font-medium text-accent">−{formatNaira(discount)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-ink-soft">Delivery</dt>
                 <dd className="font-medium text-ink">
@@ -622,7 +744,7 @@ const Checkout = () => {
               </div>
               <div className="mt-1 flex items-baseline justify-between">
                 <dt className="font-display text-base text-ink">Total</dt>
-                <dd className="font-display text-2xl text-ink">{formatNaira(total)}</dd>
+                <dd className="font-display text-2xl text-ink">{formatNaira(payable)}</dd>
               </div>
             </dl>
 
@@ -635,6 +757,4 @@ const Checkout = () => {
       </div>
     </Layout>
   );
-};
-
-export default Checkout;
+}

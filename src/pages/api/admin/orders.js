@@ -1,49 +1,44 @@
-import { isAdminRequest } from "@/lib/adminAuth";
-import { readOrders, writeOrders } from "@/lib/ordersStore";
+import {
+  allowMethods,
+  dbError,
+  requireAdminSession,
+  sendJson,
+} from "@/lib/apiHelpers";
+import { ORDER_SELECT, toOrder } from "@/lib/productMapper";
 
-const publicOrder = (order) => ({
-  ...order,
-  receipt: order.receipt
-    ? {
-        name: order.receipt.name,
-        mime: order.receipt.mime,
-        size: order.receipt.size,
-      }
-    : null,
-});
+const STATUSES = [
+  "PENDING_PAYMENT",
+  "PAYMENT_CONFIRMED",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+];
 
-export default function handler(req, res) {
-  if (!isAdminRequest(req)) {
-    return res.status(401).json({ error: "Please sign in to the admin panel." });
+export default async function handler(req, res) {
+  if (!allowMethods(req, res, ["GET"])) return;
+
+  const session = await requireAdminSession(req, res);
+  if (!session) return;
+  const { supabase } = session;
+
+  const status = String(req.query.status || "");
+  const search = String(req.query.q || "").trim().slice(0, 60);
+
+  let query = supabase
+    .from("orders")
+    .select(ORDER_SELECT)
+    .order("placed_at", { ascending: false })
+    .limit(Math.min(100, Math.max(1, Number(req.query.limit) || 60)));
+
+  if (STATUSES.includes(status)) query = query.eq("status", status);
+  if (search) {
+    query = query.or(
+      `reference.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,customer_email.ilike.%${search}%`
+    );
   }
 
-  res.setHeader("Cache-Control", "no-store");
-
-  if (req.method === "GET") {
-    return res.status(200).json({ orders: readOrders().map(publicOrder) });
-  }
-
-  if (req.method === "POST") {
-    const id = String(req.body?.id || "").trim();
-    const orders = readOrders();
-    const index = orders.findIndex((order) => order.id === id);
-
-    if (index === -1) {
-      return res.status(404).json({ error: "Order not found." });
-    }
-
-    if (orders[index].status !== "Payment Confirmed") {
-      orders[index] = {
-        ...orders[index],
-        status: "Payment Confirmed",
-        confirmedAt: new Date().toISOString(),
-      };
-      writeOrders(orders);
-    }
-
-    return res.status(200).json({ order: publicOrder(orders[index]) });
-  }
-
-  res.setHeader("Allow", "GET, POST");
-  return res.status(405).json({ error: "Method not allowed" });
+  const { data, error } = await query;
+  if (error) return dbError(res, error, "We could not load orders.");
+  return sendJson(res, 200, { orders: (data || []).map(toOrder) });
 }

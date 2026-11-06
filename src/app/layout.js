@@ -22,7 +22,16 @@ export const metadata = {
   title: "QueenFizzie — Naija Beauty, Delivered",
   description:
     "Original skincare, body rituals and scent blended for melanin-rich skin. Delivered nationwide from Lekki, Lagos.",
-  icons: { icon: "/favicon.ico" },
+  applicationName: "QueenFizzie",
+  manifest: "/manifest.webmanifest",
+  themeColor: "#fdf7f6",
+  icons: { icon: "/favicon.ico", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: {
+    capable: true,
+    title: "QueenFizzie",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
 };
 
 export default function RootLayout({ children }) {

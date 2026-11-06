@@ -1,33 +1,48 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FiArrowRight, FiCopy, FiTag } from "react-icons/fi";
+import { FiArrowRight, FiCheck, FiCopy, FiTag } from "react-icons/fi";
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/data/products";
+import { useStore } from "@/store/store";
 import { formatNaira } from "@/lib/money";
 
-const PROMO_CODES = [
-  { code: "NAIJA15", detail: "15% off your first order" },
-  { code: "QUEENSET", detail: "Free mini mist with any gift box" },
-  { code: "LAGOSFREE", detail: "Free delivery within Lagos on orders over ₦80,000" },
-];
-
 const Promos = () => {
+  const { catalog } = useStore();
+  const [promos, setPromos] = useState([]);
+  const [copied, setCopied] = useState("");
+
+  useEffect(() => {
+    fetch("/api/promos/active", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : { promos: [] }))
+      .then((payload) => setPromos(payload.promos || []))
+      .catch(() => {});
+  }, []);
+
   const deals = useMemo(
     () =>
-      [...products]
+      [...catalog]
         .filter((item) => item.oldprice)
         .sort(
           (a, b) =>
             (b.oldprice - b.price) / b.oldprice - (a.oldprice - a.price) / a.oldprice
         ),
-    []
+    [catalog]
   );
 
   const biggest = deals[0];
+
+  const copy = async (code) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      setTimeout(() => setCopied(""), 1800);
+    } catch (error) {
+      /* clipboard may be unavailable */
+    }
+  };
 
   return (
     <Layout>
@@ -87,7 +102,7 @@ const Promos = () => {
               </h2>
             </div>
             <span className="stat-pill hidden sm:inline-flex">
-              <FiTag size={12} /> Ends Sunday
+              <FiTag size={12} /> While stock lasts
             </span>
           </div>
 
@@ -98,30 +113,51 @@ const Promos = () => {
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          {PROMO_CODES.map((promo) => (
-            <div key={promo.code} className="card card-hover flex flex-col gap-2 p-5">
-              <div className="flex items-center justify-between">
-                <span className="rounded-lg border border-dashed border-line-strong bg-surface-2 px-3 py-1.5 font-mono text-sm font-bold tracking-widest text-ink">
-                  {promo.code}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (typeof navigator !== "undefined" && navigator.clipboard) {
-                      navigator.clipboard.writeText(promo.code).catch(() => {});
-                    }
-                  }}
-                  className="btn-icon h-9 w-9"
-                  aria-label={`Copy code ${promo.code}`}
-                >
-                  <FiCopy size={14} />
-                </button>
-              </div>
-              <p className="text-sm text-ink-soft">{promo.detail}</p>
-              <p className="mt-auto text-[11px] text-muted">Apply at checkout · one per order</p>
+        <section>
+          <div>
+            <span className="eyebrow">Promo codes</span>
+            <h2 className="mt-1 font-display text-2xl text-ink">Live codes from the studio</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              Apply any of these at checkout — one code per order.
+            </p>
+          </div>
+
+          {promos.length === 0 ? (
+            <div className="card mt-4 p-8 text-center text-sm text-ink-soft">
+              No public promo codes right now. New codes land with our glow letter.
             </div>
-          ))}
+          ) : (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {promos.map((promo) => (
+                <div key={promo.code} className="card card-hover flex flex-col gap-2 p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-lg border border-dashed border-line-strong bg-surface-2 px-3 py-1.5 font-mono text-sm font-bold tracking-widest text-ink">
+                      {promo.code}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copy(promo.code)}
+                      className="btn-icon h-9 w-9"
+                      aria-label={`Copy code ${promo.code}`}
+                    >
+                      {copied === promo.code ? <FiCheck size={14} className="text-accent" /> : <FiCopy size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-sm text-ink-soft">{promo.description}</p>
+                  {promo.min_subtotal > 0 && (
+                    <p className="text-[11px] text-muted">
+                      Minimum spend {formatNaira(promo.min_subtotal)}
+                    </p>
+                  )}
+                  {promo.expires_at && (
+                    <p className="text-[11px] text-muted">
+                      Ends {new Date(promo.expires_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </Layout>

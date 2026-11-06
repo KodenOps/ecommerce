@@ -5,8 +5,10 @@ import Link from "next/link";
 import {
   FiHeart,
   FiHome,
+  FiLogIn,
   FiMail,
   FiPackage,
+  FiShield,
   FiShoppingBag,
   FiTag,
   FiUser,
@@ -18,7 +20,10 @@ import {
 import { GiQueenCrown } from "react-icons/gi";
 import ThemeToggle from "./ThemeToggle";
 import Footer from "./Footer";
+import ProfileMenu from "./ProfileMenu";
+import NotificationBell from "./NotificationBell";
 import { useStore } from "@/store/store";
+import { useAuth } from "./AuthProvider";
 import { formatNaira } from "@/lib/money";
 
 export const NAV_ITEMS = [
@@ -71,11 +76,12 @@ function Announcement() {
 
 function Header({ onOpenMenu, pathname }) {
   const { cartCount } = useStore();
+  const { user } = useAuth();
 
   return (
     <header className="sticky top-0 z-40">
       <div className="glass border-b border-line/80">
-        <div className="shell flex h-16 items-center justify-between gap-4">
+        <div className="shell flex h-16 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <BrandMark />
           </div>
@@ -100,18 +106,19 @@ function Header({ onOpenMenu, pathname }) {
                 </Link>
               );
             })}
+            {user?.isAdmin && (
+              <Link
+                href="/Admin/Dashboard"
+                className="ml-1 inline-flex items-center gap-1.5 rounded-full border border-accent/30 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent-soft"
+              >
+                <FiShield size={12} /> Admin
+              </Link>
+            )}
           </nav>
 
-          {/* Right side: account, bag, then the mobile menu button */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/Contact"
-              className="btn-icon hidden sm:inline-flex"
-              aria-label="Account and help"
-              title="Account"
-            >
-              <FiUser size={17} />
-            </Link>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <NotificationBell />
+            <ProfileMenu compact />
             <Link
               href="/Cart"
               className="btn-icon relative"
@@ -142,6 +149,7 @@ function Header({ onOpenMenu, pathname }) {
 
 function SideRail({ pathname }) {
   const { cartCount, subtotal, favorites } = useStore();
+  const { user } = useAuth();
 
   return (
     <aside className="hidden lg:block">
@@ -181,6 +189,30 @@ function SideRail({ pathname }) {
               );
             })}
           </nav>
+
+          <div className="divider my-4" />
+
+          <div className="flex flex-col gap-1">
+            {user ? (
+              <>
+                <Link href="/Account" className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-surface-2 hover:text-ink">
+                  <FiUser size={16} className="text-muted group-hover:text-accent" />
+                  <span className="flex-1">My profile</span>
+                </Link>
+                {user.isAdmin && (
+                  <Link href="/Admin/Dashboard" className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-surface-2 hover:text-ink">
+                    <FiShield size={16} className="text-muted group-hover:text-accent" />
+                    <span className="flex-1">Admin panel</span>
+                  </Link>
+                )}
+              </>
+            ) : (
+              <Link href="/Login" className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-ink-soft hover:bg-surface-2 hover:text-ink">
+                <FiLogIn size={16} className="text-muted group-hover:text-accent" />
+                <span className="flex-1">Sign in</span>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="card overflow-hidden">
@@ -212,6 +244,7 @@ function SideRail({ pathname }) {
 
 function MobileNav({ open, onClose, pathname }) {
   const { cartCount, favorites } = useStore();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     if (!open) return undefined;
@@ -240,6 +273,28 @@ function MobileNav({ open, onClose, pathname }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto p-5" aria-label="Mobile">
+          {user && (
+            <Link
+              href="/Account"
+              onClick={onClose}
+              className="mb-4 flex items-center gap-3 rounded-2xl border border-line bg-surface-2 p-3"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-xs font-bold text-accent">
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
+                )}
+              </span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold text-ink">{user.fullName}</span>
+                <span className="block truncate text-[11px] text-ink-soft">{user.phone}</span>
+              </span>
+              <FiArrowRight className="ml-auto text-muted" size={14} />
+            </Link>
+          )}
+
           <p className="label mb-2 px-1">Explore</p>
           <div className="flex flex-col gap-1">
             {SIDE_LINKS.map((item) => {
@@ -272,11 +327,41 @@ function MobileNav({ open, onClose, pathname }) {
                 </Link>
               );
             })}
+            {user?.isAdmin && (
+              <Link
+                href="/Admin/Dashboard"
+                onClick={onClose}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-accent"
+              >
+                <FiShield size={17} /> Admin panel
+              </Link>
+            )}
           </div>
 
           <div className="divider my-5" />
 
-          <div className="flex items-center justify-between rounded-2xl border border-line bg-surface-2 px-4 py-3">
+          {user ? (
+            <button
+              type="button"
+              onClick={async () => {
+                onClose();
+                await signOut();
+              }}
+              className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-accent hover:bg-accent-soft"
+            >
+              <FiLogIn size={16} /> Sign out
+            </button>
+          ) : (
+            <Link
+              href="/Login"
+              onClick={onClose}
+              className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-accent hover:bg-accent-soft"
+            >
+              <FiLogIn size={16} /> Sign in or create an account
+            </Link>
+          )}
+
+          <div className="mt-4 flex items-center justify-between rounded-2xl border border-line bg-surface-2 px-4 py-3">
             <span className="text-xs font-semibold text-ink-soft">Appearance</span>
             <ThemeToggle />
           </div>

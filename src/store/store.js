@@ -6,10 +6,9 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
-import { getProductById, products } from "@/data/products";
+import { useAuth } from "@/components/AuthProvider";
 import {
   DELIVERY_FEE,
   FREE_DELIVERY_OVER,
@@ -19,12 +18,6 @@ import {
 const KEYS = {
   cart: "qf:cart",
   favorites: "qf:favorites",
-  orders: "qf:orders",
-};
-
-export const ORDER_STATUS = {
-  pending: "Confirming Payment",
-  confirmed: "Payment Confirmed",
 };
 
 function readStorage(key, fallback) {
@@ -42,12 +35,14 @@ function writeStorage(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    /* ignore storage failures */
+    /* storage may be unavailable */
   }
 }
 
 const EMPTY_STORE = {
   ready: false,
+  catalog: [],
+  catalogLoading: true,
   cart: [],
   cartItems: [],
   cartCount: 0,
@@ -57,8 +52,8 @@ const EMPTY_STORE = {
   total: 0,
   favorites: [],
   favoriteItems: [],
-  orders: [],
   toast: null,
+  getProduct: () => null,
   addToCart: () => {},
   removeFromCart: () => {},
   setQuantity: () => {},
@@ -66,29 +61,42 @@ const EMPTY_STORE = {
   toggleFavorite: () => {},
   isFavorite: () => false,
   createOrder: async () => null,
-  syncOrderStatuses: async () => {},
+  refreshCatalog: async () => {},
+  notify: () => {},
 };
 
 const StoreContext = createContext(EMPTY_STORE);
 
 export function StoreProvider({ children }) {
+  const { user } = useAuth();
+  const [catalog, setCatalog] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [cart, setCart] = useState([]);
   const [favorites, setFavorites] = useState([]);
-  const [orders, setOrders] = useState([]);
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState(null);
-  const ordersRef = useRef([]);
+
+  const notify = useCallback((message) => setToast({ message, id: Date.now() }), []);
+
+  const refreshCatalog = useCallback(async () => {
+    try {
+      const response = await fetch("/api/products", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      setCatalog(payload.products || []);
+    } catch (error) {
+      /* offline: keep whatever we have */
+    } finally {
+      setCatalogLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setCart(readStorage(KEYS.cart, []));
     setFavorites(readStorage(KEYS.favorites, []));
-    setOrders(readStorage(KEYS.orders, []));
     setReady(true);
-  }, []);
-
-  useEffect(() => {
-    ordersRef.current = orders;
-  }, [orders]);
+    refreshCatalog();
+  }, [refreshCatalog]);
 
   useEffect(() => {
     if (ready) writeStorage(KEYS.cart, cart);
@@ -98,9 +106,41 @@ export function StoreProvider({ children }) {
     if (ready) writeStorage(KEYS.favorites, favorites);
   }, [favorites, ready]);
 
+  // Signed-in favourites live in Postgres; merge the local shelf once on load.
   useEffect(() => {
-    if (ready) writeStorage(KEYS.orders, orders);
-  }, [orders, ready]);
+    if (!user) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch("/api/favorites", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        const serverIds = new Set(payload.ids || []);
+        if (cancelled) return;
+
+        const localOnly = readStorage(KEYS.favorites, []).filter((id) => !serverIds.has(id));
+        if (localOnly.length) {
+          await Promise.all(
+            localOnly.map((productId) =>
+              fetch("/api/favorites", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ productId, action: "add" }),
+              }).catch(() => {})
+            )
+          );
+        }
+        setFavorites((current) => Array.from(new Set([...(payload.ids || []), ...current])));
+      } catch (error) {
+        /* keep local favourites */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -108,58 +148,94 @@ export function StoreProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const notify = useCallback((message) => setToast({ message, id: Date.now() }), []);
+  const getProduct = useCallback(
+    (productId) => catalog.find((product) => String(product.id) === String(productId)) || null,
+    [catalog]
+  );
 
   const addToCart = useCallback(
     (productId, quantity = 1) => {
-      const product = getProductById(Number(productId));
-      if (!product) return;
+      const product = getProduct(productId);
+      if (!product) {
+        notify("That product is still loading — try again in a moment.");
+        return;
+      }
+      if (product.stock <= 0) {
+        notify(`${product.title} is sold out.`);
+        return;
+      }
       setCart((current) => {
         const existing = current.find((line) => line.id === product.id);
+        const nextQty = Math.min(
+          product.stock,
+          existing ? existing.qty + quantity : quantity
+        );
         if (existing) {
+          if (nextQty === existing.qty) {
+            notify(`Only ${product.stock} of ${product.title} left.`);
+            return current;
+          }
           return current.map((line) =>
-            line.id === product.id ? { ...line, qty: line.qty + quantity } : line
+            line.id === product.id ? { ...line, qty: nextQty } : line
           );
         }
-        return [...current, { id: product.id, qty: quantity }];
+        return [...current, { id: product.id, qty: nextQty }];
       });
       notify(`${product.title} added to your bag`);
     },
-    [notify]
+    [getProduct, notify]
   );
 
   const removeFromCart = useCallback((productId) => {
-    setCart((current) => current.filter((line) => line.id !== productId));
+    setCart((current) => current.filter((line) => String(line.id) !== String(productId)));
   }, []);
 
   const setQuantity = useCallback((productId, quantity) => {
     setCart((current) => {
-      if (quantity <= 0) return current.filter((line) => line.id !== productId);
+      if (quantity <= 0) {
+        return current.filter((line) => String(line.id) !== String(productId));
+      }
+      const product = catalog.find((item) => String(item.id) === String(productId));
+      const cap = product?.stock ? Math.min(20, product.stock) : 20;
       return current.map((line) =>
-        line.id === productId ? { ...line, qty: Math.min(quantity, 20) } : line
+        String(line.id) === String(productId)
+          ? { ...line, qty: Math.min(quantity, cap) }
+          : line
       );
     });
-  }, []);
+  }, [catalog]);
 
   const clearCart = useCallback(() => setCart([]), []);
 
   const toggleFavorite = useCallback(
     (productId) => {
-      const product = getProductById(Number(productId));
+      const product = getProduct(productId);
+      const id = String(productId);
+      let saved = false;
+
       setFavorites((current) => {
-        if (current.includes(productId)) {
-          notify(`${product?.title ?? "Product"} removed from favorites`);
-          return current.filter((id) => id !== productId);
+        if (current.includes(id)) {
+          notify(`${product?.title ?? "Product"} removed from favourites`);
+          return current.filter((item) => item !== id);
         }
+        saved = true;
         notify(`${product?.title ?? "Product"} saved for later`);
-        return [...current, productId];
+        return [...current, id];
       });
+
+      if (user) {
+        fetch("/api/favorites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: id, action: saved ? "add" : "remove" }),
+        }).catch(() => {});
+      }
     },
-    [notify]
+    [getProduct, notify, user]
   );
 
   const isFavorite = useCallback(
-    (productId) => favorites.includes(Number(productId)),
+    (productId) => favorites.includes(String(productId)),
     [favorites]
   );
 
@@ -170,25 +246,19 @@ export function StoreProvider({ children }) {
         throw new Error("Please upload your payment receipt before completing the order.");
       }
 
-      const lines = cart
-        .map((line) => {
-          const product = getProductById(line.id);
-          return product ? { ...product, qty: line.qty } : null;
-        })
-        .filter(Boolean);
-
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customer: details.customer ?? {},
-          items: cart.map((line) => ({ id: line.id, qty: line.qty })),
+          items: cart.map((line) => ({ productId: line.id, qty: line.qty })),
           receipt: {
             dataUrl: details.receipt.dataUrl,
             name: details.receipt.name,
             type: details.receipt.type,
             size: details.receipt.size,
           },
+          promoCode: details.promoCode || null,
         }),
       });
 
@@ -198,76 +268,27 @@ export function StoreProvider({ children }) {
         throw new Error(payload.error || "We could not submit your order. Please try again.");
       }
 
-      const created = payload.order;
-      const order = {
-        id: created.id,
-        placedAt: created.createdAt,
-        status: created.status,
-        items: lines.map((line) => ({
-          id: line.id,
-          title: line.title,
-          price: line.price,
-          qty: line.qty,
-          image: line.image,
-        })),
-        subtotal: created.subtotal,
-        delivery: created.delivery,
-        total: created.total,
-        customer: created.customer,
-        payment: "Bank transfer",
-        receiptName: created.receipt?.name ?? details.receipt.name,
-      };
-
-      setOrders((current) => [order, ...current]);
       setCart([]);
-      return order;
+      refreshCatalog();
+      return payload.order;
     },
-    [cart]
+    [cart, refreshCatalog]
   );
-
-  const syncOrderStatuses = useCallback(async () => {
-    const list = ordersRef.current;
-    if (!list.length) return;
-    const ids = list.map((order) => order.id).join(",");
-    try {
-      const response = await fetch(`/api/orders/status?ids=${encodeURIComponent(ids)}`);
-      if (!response.ok) return;
-      const payload = await response.json();
-      const statuses = new Map(
-        (payload.orders || []).map((order) => [order.id, order.status])
-      );
-      if (
-        list.some(
-          (order) => statuses.has(order.id) && statuses.get(order.id) !== order.status
-        )
-      ) {
-        setOrders((current) =>
-          current.map((order) =>
-            statuses.has(order.id) && statuses.get(order.id) !== order.status
-              ? { ...order, status: statuses.get(order.id) }
-              : order
-          )
-        );
-      }
-    } catch (error) {
-      /* offline or API unavailable — keep the local status */
-    }
-  }, []);
 
   const cartItems = useMemo(
     () =>
       cart
         .map((line) => {
-          const product = getProductById(line.id);
+          const product = catalog.find((item) => String(item.id) === String(line.id));
           return product ? { ...product, qty: line.qty } : null;
         })
         .filter(Boolean),
-    [cart]
+    [cart, catalog]
   );
 
   const favoriteItems = useMemo(
-    () => favorites.map((id) => getProductById(id)).filter(Boolean),
-    [favorites]
+    () => favorites.map((id) => catalog.find((item) => String(item.id) === String(id))).filter(Boolean),
+    [favorites, catalog]
   );
 
   const cartCount = useMemo(
@@ -295,6 +316,8 @@ export function StoreProvider({ children }) {
   const value = useMemo(
     () => ({
       ready,
+      catalog,
+      catalogLoading,
       cart,
       cartItems,
       cartCount,
@@ -304,8 +327,8 @@ export function StoreProvider({ children }) {
       total: subtotal + delivery,
       favorites,
       favoriteItems,
-      orders,
       toast,
+      getProduct,
       addToCart,
       removeFromCart,
       setQuantity,
@@ -313,11 +336,13 @@ export function StoreProvider({ children }) {
       toggleFavorite,
       isFavorite,
       createOrder,
-      syncOrderStatuses,
-      catalog: products,
+      refreshCatalog,
+      notify,
     }),
     [
       ready,
+      catalog,
+      catalogLoading,
       cart,
       cartItems,
       cartCount,
@@ -326,8 +351,8 @@ export function StoreProvider({ children }) {
       delivery,
       favorites,
       favoriteItems,
-      orders,
       toast,
+      getProduct,
       addToCart,
       removeFromCart,
       setQuantity,
@@ -335,7 +360,8 @@ export function StoreProvider({ children }) {
       toggleFavorite,
       isFavorite,
       createOrder,
-      syncOrderStatuses,
+      refreshCatalog,
+      notify,
     ]
   );
 

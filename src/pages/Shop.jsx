@@ -6,7 +6,7 @@ import { FiSearch, FiSliders, FiX } from "react-icons/fi";
 import Layout from "@/components/Layout";
 import PageHeader from "@/components/PageHeader";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/data/products";
+import { useStore } from "@/store/store";
 
 const SORTS = [
   { value: "featured", label: "Featured" },
@@ -18,6 +18,7 @@ const SORTS = [
 
 const Shop = () => {
   const router = useRouter();
+  const { catalog, catalogLoading } = useStore();
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("featured");
@@ -29,12 +30,12 @@ const Shop = () => {
   }, [router.isReady, router.query.category]);
 
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(products.map((item) => item.category)))],
-    []
+    () => ["All", ...Array.from(new Set(catalog.map((item) => item.category)))],
+    [catalog]
   );
 
   const visible = useMemo(() => {
-    let list = products.filter((item) => category === "All" || item.category === category);
+    let list = catalog.filter((item) => category === "All" || item.category === category);
 
     if (query.trim()) {
       const needle = query.trim().toLowerCase();
@@ -68,7 +69,7 @@ const Shop = () => {
         break;
     }
     return sorted;
-  }, [category, query, sort]);
+  }, [catalog, category, query, sort]);
 
   return (
     <Layout>
@@ -161,7 +162,20 @@ const Shop = () => {
           </div>
         </div>
 
-        {visible.length > 0 ? (
+        {catalogLoading && visible.length === 0 ? (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="card animate-pulse overflow-hidden">
+                <div className="aspect-square bg-surface-2" />
+                <div className="space-y-2 p-4">
+                  <div className="h-2 w-1/3 rounded bg-surface-2" />
+                  <div className="h-3 w-4/5 rounded bg-surface-2" />
+                  <div className="h-4 w-1/2 rounded bg-surface-2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : visible.length > 0 ? (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {visible.map((product) => (
               <ProductCard key={product.id} product={product} />
