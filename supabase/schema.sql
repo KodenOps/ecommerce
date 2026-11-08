@@ -926,6 +926,47 @@ $$;
 
 grant execute on function public.admin_finances() to authenticated;
 
+-- ------------------------------------------------------- storefront demand ---
+-- Public, aggregate-only view of which categories are actually selling this
+-- month. Revenue and customer details never leave the database.
+create or replace function public.category_demand(p_limit integer default 6)
+returns table (category text, units bigint, products integer, image text)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with sold as (
+    select p.category, sum(i.qty)::bigint as units
+    from public.order_items i
+    join public.orders o on o.id = i.order_id
+    join public.products p on p.id = i.product_id
+    where o.payment_status = 'PAID'
+      and o.status <> 'CANCELLED'
+      and o.placed_at >= date_trunc('month', now())
+      and p.status = 'ACTIVE'
+    group by p.category
+  )
+  select
+    sold.category,
+    sold.units,
+    (
+      select count(*)::integer from public.products p
+      where p.category = sold.category and p.status = 'ACTIVE'
+    ) as products,
+    (
+      select p.image from public.products p
+      where p.category = sold.category and p.status = 'ACTIVE'
+      order by p.featured desc, p.rating_count desc, p.created_at asc
+      limit 1
+    ) as image
+  from sold
+  order by sold.units desc, sold.category asc
+  limit greatest(1, least(coalesce(p_limit, 6), 12));
+$$;
+
+grant execute on function public.category_demand(integer) to anon, authenticated;
+
 -- ------------------------------------------------------------------ storage ---
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

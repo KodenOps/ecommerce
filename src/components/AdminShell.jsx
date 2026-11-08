@@ -73,6 +73,19 @@ export default function AdminShell({ children, title, eyebrow, description, acti
       </header>
 
       <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-6 sm:px-6">
+        <main className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+              <h1 className="mt-1 font-display text-2xl text-ink sm:text-3xl">{title}</h1>
+              {description && <p className="mt-1 max-w-2xl text-sm text-ink-soft">{description}</p>}
+            </div>
+            {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          </div>
+
+          <div className="mt-5 flex flex-col gap-5">{children}</div>
+        </main>
+
         <aside className="hidden w-56 shrink-0 lg:block">
           <nav className="sticky top-24 flex flex-col gap-1 rounded-3xl border border-line bg-surface p-3 shadow-soft">
             {LINKS.map((link) => {
@@ -109,25 +122,12 @@ export default function AdminShell({ children, title, eyebrow, description, acti
             </button>
           </nav>
         </aside>
-
-        <main className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              {eyebrow && <p className="eyebrow">{eyebrow}</p>}
-              <h1 className="mt-1 font-display text-2xl text-ink sm:text-3xl">{title}</h1>
-              {description && <p className="mt-1 max-w-2xl text-sm text-ink-soft">{description}</p>}
-            </div>
-            {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-          </div>
-
-          <div className="mt-5 flex flex-col gap-5">{children}</div>
-        </main>
       </div>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden="true" />
-          <div className="absolute inset-y-0 left-0 flex w-[82%] max-w-xs flex-col border-r border-line bg-surface">
+          <div className="absolute inset-y-0 right-0 flex w-[82%] max-w-xs flex-col border-l border-line bg-surface">
             <div className="flex items-center justify-between border-b border-line px-4 py-4">
               <span className="font-display text-base text-ink">Admin menu</span>
               <button type="button" onClick={() => setOpen(false)} className="btn-icon" aria-label="Close menu">
