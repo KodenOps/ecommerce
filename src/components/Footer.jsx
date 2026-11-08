@@ -45,8 +45,8 @@ const Footer = () => {
       <div className="aurora -right-16 bottom-0 h-72 w-72 bg-violet/20" />
 
       <div className="shell relative py-14 lg:py-16">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))_1.4fr]">
-          <div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))_1.4fr] lg:gap-10">
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <div className="flex items-center gap-2.5">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accent to-violet text-accent-ink shadow-glow">
                 <GiQueenCrown size={20} />
@@ -97,7 +97,7 @@ const Footer = () => {
             </div>
           ))}
 
-          <div>
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <p className="label">The glow letter</p>
             <p className="mt-4 text-sm leading-relaxed text-ink-soft">
               Restock alerts, new drops, and members-only Naija deals.
