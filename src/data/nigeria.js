@@ -44,8 +44,9 @@ export const STORE = {
   email: "hello@queenfizzie.com",
   phone: "+234 803 000 0000",
   address: "Onabola Junction, Pedro Road, Shomolu, Lagos",
-  // Search string the studio map is centred on; Google geocodes it, so no API key is needed.
-  mapQuery: "Queenfizzie Skincare, Onabola Junction, Pedro Road, Shomolu, Lagos",
+  // Exact pin for the studio map (Onabola Street off Pedro Road, from OpenStreetMap).
+  // Coordinates keep the map from drifting to a similarly named place; adjust if the storefront moves.
+  mapPin: { lat: 6.5422431, lng: 3.3804479 },
   hours: "Mon–Sat, 9am–6pm WAT",
   bank: {
     bankName: "Moniepoint MFB",

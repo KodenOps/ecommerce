@@ -45,13 +45,11 @@ const CHANNELS = [
   },
 ];
 
-const MAP_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(
-  STORE.mapQuery
-)}&z=16&hl=en&output=embed`;
+const MAP_PIN = `${STORE.mapPin.lat},${STORE.mapPin.lng}`;
 
-const MAP_DIRECTIONS = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-  STORE.mapQuery
-)}`;
+const MAP_EMBED = `https://www.google.com/maps?q=${MAP_PIN}&z=16&hl=en&output=embed`;
+
+const MAP_DIRECTIONS = `https://www.google.com/maps/dir/?api=1&destination=${MAP_PIN}`;
 
 const FAQS = [
   {
