@@ -5,7 +5,7 @@ import { themeScript } from "@/lib/themeScript";
 export const metadata = {
   title: "QueenFizzie — Skin Care, Delivered",
   description:
-    "Original skincare, body routines and scent blended for melanin-rich skin. Delivered nationwide from Lekki, Lagos.",
+    "Original skincare, body routines and scent blended for melanin-rich skin. Delivered nationwide from Shomolu, Lagos.",
   applicationName: "QueenFizzie",
   manifest: "/manifest.webmanifest",
   themeColor: "#fdf7f6",

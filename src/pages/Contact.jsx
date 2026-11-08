@@ -39,7 +39,7 @@ const CHANNELS = [
   {
     icon: FiClock,
     label: "Dispatch",
-    value: "Ships from Lekki",
+    value: "Ships from Shomolu",
     detail: `Free over ${formatNaira(FREE_DELIVERY_OVER)}, nationwide.`,
   },
 ];
@@ -48,7 +48,7 @@ const FAQS = [
   {
     question: "How long does delivery take?",
     answer:
-      "Lagos orders arrive in 24–48 hours. Every other state takes 2–5 working days after dispatch from Lekki. You can follow the status on your Orders page.",
+      "Lagos orders arrive in 24–48 hours. Every other state takes 2–5 working days after dispatch from Shomolu. You can follow the status on your Orders page.",
   },
   {
     question: "How do I pay for my order?",
@@ -214,11 +214,11 @@ const Contact = () => {
 
           <div className="flex flex-col gap-4">
             <div className="card p-5">
-              <Titles eyebrow="Studio" title="Visit our Lekki studio" subtext="Open by appointment — product consults, shade matching, and pickup for Lagos orders. Zobo on the house." />
+              <Titles eyebrow="Studio" title="Visit our Shomolu studio" subtext="Open by appointment — product consults, shade matching, and pickup for Lagos orders. Zobo on the house." />
               <div className="mt-4 overflow-hidden rounded-2xl border border-line">
                 <div className="dot-grid flex h-40 items-center justify-center bg-surface-2">
                   <span className="stat-pill bg-surface">
-                    <FiMapPin size={12} className="text-accent" /> Lekki Phase 1, Lagos
+                    <FiMapPin size={12} className="text-accent" /> Onabola Junction, Shomolu
                   </span>
                 </div>
               </div>

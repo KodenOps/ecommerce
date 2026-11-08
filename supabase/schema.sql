@@ -787,7 +787,7 @@ begin
 
   v_message := case v_status
     when 'PAYMENT_CONFIRMED' then 'Payment confirmed — your order is queued for packing.'
-    when 'PROCESSING' then 'Your order is being packed in Lekki.'
+    when 'PROCESSING' then 'Your order is being packed in Shomolu.'
     when 'SHIPPED' then 'Your order has been shipped' || coalesce(' via ' || nullif(trim(p_courier), ''), '') ||
       coalesce(' (tracking ' || nullif(trim(p_tracking), '') || ')', '') || '.'
     when 'DELIVERED' then 'Delivered — we hope you love your glow.'

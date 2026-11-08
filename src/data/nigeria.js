@@ -43,7 +43,7 @@ export const STORE = {
   tagline: "Skin Care, delivered.",
   email: "hello@queenfizzie.com",
   phone: "+234 803 000 0000",
-  address: "12B Admiralty Way, Lekki Phase 1, Lagos",
+  address: "Onabola Junction, Shomolu, Lagos",
   hours: "Mon–Sat, 9am–6pm WAT",
   bank: {
     bankName: "Moniepoint MFB",

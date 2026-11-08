@@ -58,7 +58,7 @@ const Hero = () => {
 
           <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ink-soft sm:text-base">
             Original skincare, body routines and scent blended for melanin-rich
-            skin — packed in Lekki, Lagos and delivered to every state in Nigeria
+            skin — packed in Shomolu, Lagos and delivered to every state in Nigeria
             in 1–5 days.
           </p>
 

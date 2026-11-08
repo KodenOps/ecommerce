@@ -62,7 +62,7 @@ const Footer = () => {
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-soft">
               Original skincare, body routines and scent, blended for melanin-rich
-              skin and shipped from Lekki, Lagos to every state in Nigeria.
+              skin and shipped from Shomolu, Lagos to every state in Nigeria.
               100% original, tested &amp; trusted.
             </p>
             <div className="mt-5 flex items-center gap-2">

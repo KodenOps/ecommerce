@@ -377,7 +377,7 @@ export default function Checkout() {
                 <div>
                   <h2 className="font-display text-xl text-ink">Where should it go?</h2>
                   <p className="mt-1 text-sm text-ink-soft">
-                    We dispatch from Lekki, Lagos — nationwide in 1–5 working days.
+                    We dispatch from Shomolu, Lagos — nationwide in 1–5 working days.
                   </p>
                 </div>
 
@@ -424,7 +424,7 @@ export default function Checkout() {
                       value={form.address}
                       onChange={update("address")}
                       className="field mt-1.5"
-                      placeholder="15B Admiralty Way, Lekki Phase 1"
+                      placeholder="12 Onabola Junction, Shomolu"
                       autoComplete="street-address"
                     />
                   </div>

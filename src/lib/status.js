@@ -29,7 +29,7 @@ export const ORDER_STATUS_LABELS = {
 export const ORDER_STATUS_HINTS = {
   PENDING_PAYMENT: "We are checking your transfer against the uploaded receipt.",
   PAYMENT_CONFIRMED: "Payment approved — your order is queued for packing.",
-  PROCESSING: "Your order is being packed in Lekki.",
+  PROCESSING: "Your order is being packed in Shomolu.",
   SHIPPED: "On the way with our courier partner.",
   DELIVERED: "Delivered. We hope you love it.",
   CANCELLED: "This order was cancelled.",

@@ -27,7 +27,7 @@ const DETAILS = [
   { label: "Authenticity", value: "100% Original" },
   { label: "Trust", value: "Tested & trusted" },
   { label: "Skin tone", value: "Made for melanin-rich skin" },
-  { label: "Dispatch", value: "Ships from Lekki, Lagos" },
+  { label: "Dispatch", value: "Ships from Shomolu, Lagos" },
 ];
 
 export async function getServerSideProps(ctx) {
