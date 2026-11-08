@@ -150,19 +150,27 @@ export default function AdminDashboard() {
               <Link
                 key={order.id}
                 href={`/Admin/Orders?order=${order.id}`}
-                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 transition-colors hover:bg-surface-2"
+                className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-surface-2 md:flex-row md:items-center md:justify-between md:gap-3"
               >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink">{order.reference}</p>
-                  <p className="truncate text-[11px] text-ink-soft">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="min-w-0 truncate text-sm font-semibold text-ink">{order.reference}</p>
+                    <p className="shrink-0 text-sm font-semibold text-ink md:hidden">{formatNaira(order.total)}</p>
+                  </div>
+                  <p className="mt-0.5 truncate text-[11px] text-ink-soft">
                     {order.customerName} · {order.customerPhone} · {order.itemCount} item(s)
                   </p>
+                  <p className="mt-0.5 text-[11px] text-muted md:hidden">{formatDate(order.placedAt)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-ink">{formatNaira(order.total)}</p>
-                  <p className="text-[11px] text-muted">
-                    {statusLabel(order.status)} · {formatDate(order.placedAt)}
-                  </p>
+
+                <div className="flex items-center justify-between gap-2 md:flex-col md:items-end md:justify-center md:gap-0.5">
+                  <span className="inline-flex items-center rounded-full border border-line bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-ink-soft">
+                    {statusLabel(order.status)}
+                  </span>
+                  <div className="hidden text-right md:block">
+                    <p className="text-sm font-semibold text-ink">{formatNaira(order.total)}</p>
+                    <p className="text-[11px] text-muted">{formatDate(order.placedAt)}</p>
+                  </div>
                 </div>
               </Link>
             ))}

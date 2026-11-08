@@ -90,12 +90,41 @@ function OrderCard({ order, onChange, onError }) {
 
   return (
     <article className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
-          <div>
+      <div className="border-b border-line bg-surface-2/60 px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1">
             <p className="label">Order</p>
-            <p className="text-sm font-semibold text-ink">{order.reference}</p>
+            <p className="truncate text-sm font-semibold text-ink">{order.reference}</p>
+            <p className="mt-0.5 truncate text-[11px] text-ink-soft sm:hidden">
+              {order.customer.name} · {order.customer.phone}
+            </p>
           </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold sm:px-3 sm:py-1 sm:text-[11px] ${
+                pending
+                  ? "border-gold/40 bg-gold/10 text-gold"
+                  : order.status === ORDER_STATUS.CANCELLED
+                  ? "border-line bg-surface text-muted"
+                  : "border-accent/30 bg-accent-soft text-accent"
+              }`}
+            >
+              {pending ? <FiClock size={12} /> : <FiCheckCircle size={12} />}
+              {statusLabel(order.status)}
+            </span>
+            <button type="button" onClick={() => setExpanded((value) => !value)} className="btn-ghost px-2 text-[11px]">
+              {expanded ? "Close" : "Manage"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3 sm:hidden">
+          <span className="text-sm font-semibold text-ink">{formatNaira(order.total)}</span>
+          <span className="text-[11px] text-muted">{formatDate(order.placedAt)}</span>
+        </div>
+
+        <div className="mt-3 hidden flex-wrap items-center gap-x-6 gap-y-2 sm:flex">
           <div>
             <p className="label">Customer</p>
             <p className="text-sm text-ink-soft">{order.customer.name}</p>
@@ -113,27 +142,9 @@ function OrderCard({ order, onChange, onError }) {
             <p className="text-sm text-ink-soft">{formatDate(order.placedAt)}</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-semibold ${
-              pending
-                ? "border-gold/40 bg-gold/10 text-gold"
-                : order.status === ORDER_STATUS.CANCELLED
-                ? "border-line bg-surface text-muted"
-                : "border-accent/30 bg-accent-soft text-accent"
-            }`}
-          >
-            {pending ? <FiClock size={12} /> : <FiCheckCircle size={12} />}
-            {statusLabel(order.status)}
-          </span>
-          <button type="button" onClick={() => setExpanded((value) => !value)} className="btn-ghost px-2 text-[11px]">
-            {expanded ? "Close" : "Manage"}
-          </button>
-        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-[11px] text-muted">
+      <div className="flex flex-col gap-1 px-4 py-2 text-[11px] text-muted sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
         <span>{paymentLabel(order.paymentStatus)} · {order.promoCode || "no promo"} · {order.items.length} line(s)</span>
         <span>{ORDER_STATUS_HINTS[order.status]}</span>
       </div>
