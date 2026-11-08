@@ -7,6 +7,7 @@ import {
   FiClock,
   FiMail,
   FiMapPin,
+  FiNavigation,
   FiPhone,
   FiSend,
 } from "react-icons/fi";
@@ -43,6 +44,14 @@ const CHANNELS = [
     detail: `Free over ${formatNaira(FREE_DELIVERY_OVER)}, nationwide.`,
   },
 ];
+
+const MAP_EMBED = `https://www.google.com/maps?q=${encodeURIComponent(
+  STORE.mapQuery
+)}&z=16&hl=en&output=embed`;
+
+const MAP_DIRECTIONS = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+  STORE.mapQuery
+)}`;
 
 const FAQS = [
   {
@@ -215,11 +224,28 @@ const Contact = () => {
           <div className="flex flex-col gap-4">
             <div className="card p-5">
               <Titles eyebrow="Studio" title="Visit our Shomolu studio" subtext="Open by appointment — product consults, shade matching, and pickup for Lagos orders. Zobo on the house." />
-              <div className="mt-4 overflow-hidden rounded-2xl border border-line">
-                <div className="dot-grid flex h-40 items-center justify-center bg-surface-2">
-                  <span className="stat-pill bg-surface">
-                    <FiMapPin size={12} className="text-accent" /> Onabola Junction, Shomolu
-                  </span>
+              <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-surface-2">
+                <iframe
+                  title={`Map to the ${STORE.name} studio — ${STORE.address}`}
+                  src={MAP_EMBED}
+                  className="block h-52 w-full border-0 sm:h-60"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line bg-surface px-4 py-3">
+                  <p className="flex items-center gap-1.5 text-xs text-ink-soft">
+                    <FiMapPin size={12} className="shrink-0 text-accent" />
+                    {STORE.address}
+                  </p>
+                  <a
+                    href={MAP_DIRECTIONS}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent transition-colors hover:text-ink"
+                  >
+                    Get directions <FiNavigation size={12} />
+                  </a>
                 </div>
               </div>
             </div>
