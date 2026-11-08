@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  FiArrowRight,
   FiCheckCircle,
   FiClock,
   FiMail,
@@ -51,6 +52,11 @@ const MAP_EMBED = `https://www.google.com/maps?q=${MAP_PIN}&z=16&hl=en&output=em
 
 const MAP_DIRECTIONS = `https://www.google.com/maps/dir/?api=1&destination=${MAP_PIN}`;
 
+const DELIVERY_FAQ_ID = "faq";
+const RETURNS_ID = "returns";
+const PAYMENT_ID = "payment";
+const BULK_ID = "bulk";
+
 const FAQS = [
   {
     question: "How long does delivery take?",
@@ -78,6 +84,9 @@ const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", subject: "Order help", message: "" });
   const [sent, setSent] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const update = (field) => (event) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -87,19 +96,25 @@ const Contact = () => {
     setSent(true);
   };
 
+  const isDeliveryPage = mounted && window.location.pathname === "/Delivery";
+
   return (
     <Layout>
       <div className="flex flex-col gap-6">
         <PageHeader
-          eyebrow="Contact"
-          title="Talk to QueenFizzie"
-          description="Questions about an order, a formula or a shade match? Our Lagos team reads every message."
-          crumbs={[{ label: "Home", href: "/" }, { label: "Contact" }]}
-          actions={
-            <Link href="/Orders" className="btn-secondary">
-              Check an order
-            </Link>
-          }
+          eyebrow={isDeliveryPage ? "Delivery & shipping" : "Contact"}
+          title={isDeliveryPage ? "Delivery, returns and payments" : "Talk to QueenFizzie"}
+          description={isDeliveryPage
+            ? "How long delivery takes, what happens if something isn't right, and how to pay. The same answers are here whether you're checking on an order or planning a bulk or bridal buy."
+            : "Questions about an order, a formula or a shade match? Our Lagos team reads every message."}
+          crumbs={[{ label: "Home", href: "/" }, { label: isDeliveryPage ? "Delivery" : "Contact" }]}
+          actions={isDeliveryPage
+            ? <a href={MAP_DIRECTIONS} target="_blank" rel="noopener noreferrer" className="btn-secondary">
+                Get directions <FiNavigation size={13} />
+              </a>
+            : <Link href="/Orders" className="btn-secondary">
+                Check an order
+              </Link>}
         />
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -120,7 +135,7 @@ const Contact = () => {
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)] lg:items-start">
           <div className="card p-5 sm:p-6">
-            {sent ? (
+            {sent && !isDeliveryPage ? (
               <div className="flex flex-col items-center gap-3 py-10 text-center">
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-ink shadow-glow">
                   <FiCheckCircle size={24} />
@@ -259,8 +274,53 @@ const Contact = () => {
           </div>
         </div>
 
+        {isDeliveryPage && (
+          <>
+            <div className="mt-2 rounded-2xl border border-line bg-surface-2/60 p-4" id={PAYMENT_ID}>
+              <Titles eyebrow="Payment" title="How to pay" />
+              <ol className="mt-4 list-decimal list-inside space-y-2 text-sm text-ink-soft">
+                <li>Place your order and note the exact amount to transfer.</li>
+                <li>Transfer the total to our store account below.</li>
+                <li>Upload your receipt at checkout so we can match it to your order.</li>
+                <li>We confirm the transfer before dispatch.</li>
+              </ol>
+              <div className="mt-4 flex gap-3">
+                <div className="rounded-2xl border border-line bg-surface p-4">
+                  <p className="label">If paying from abroad</p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    International cards are accepted at the store checkout when the transfer is made with a Naira-equivalent deposit. Ask us for the current rate before you transfer.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-line bg-surface p-4">
+                  <p className="label">Self-transfer (direct from your bank app)</p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    When you transfer from your own bank app, the receipt shows the sender&apos;s account name. Send that receipt and we match it to your order automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 rounded-2xl border border-line bg-surface-2/60 p-4" id={BULK_ID}>
+              <Titles eyebrow="Bulk & bridal" title="Big buys, one plan" />
+              <p className="mt-1 text-sm text-ink-soft">
+                Wedding, corporate and school-bulk buys move faster with a dedicated line. Email
+                {STORE.email} or call {STORE.phone} and we will send a custom quote and delivery plan.
+              </p>
+              <a
+                href={`mailto:${STORE.email}?subject=Bulk%20%26%20bridal%20order`}
+                className="mt-3 inline-block text-xs font-semibold text-accent hover:underline"
+              >
+                Request a bulk quote
+                <FiArrowRight size={13} className="inline ml-1" />
+              </a>
+            </div>
+          </>
+        )}
+
         <section>
-          <Titles eyebrow="FAQ" title="The things people ask most" />
+          <div id={isDeliveryPage ? DELIVERY_FAQ_ID : undefined}>
+            <Titles eyebrow="FAQ" title={isDeliveryPage ? "Delivery questions" : "The things people ask most"} />
+          </div>
           <div className="mt-5 flex flex-col gap-2">
             {FAQS.map((faq, index) => {
               const open = openFaq === index;

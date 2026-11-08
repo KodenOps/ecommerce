@@ -255,7 +255,27 @@ export default function Checkout() {
               <FiClock size={13} /> {statusLabel(placed.status)}
             </span>
 
-            <div className="mt-6 w-full rounded-2xl border border-line bg-surface-2 p-4 text-left">
+            {placed.items.length > 0 && (
+              <ul className="mb-4 flex flex-col gap-2 rounded-2xl border border-line bg-surface-2 p-4 text-left">
+                {placed.items.map((item) => (
+                  <li key={item.id} className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-ink">{item.title}</span>
+                      {item.variantLabel && (
+                        <span className="block truncate text-[11px] text-accent">{item.variantLabel}</span>
+                      )}
+                      <span className="text-[11px] text-muted">Qty {item.qty}</span>
+                      {item.sku && (
+                        <span className="block truncate text-[11px] text-muted">SKU {item.sku}</span>
+                      )}
+                    </span>
+                    <span className="shrink-0 text-sm font-medium text-ink">{formatNaira(item.lineTotal ?? item.price * item.qty)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-2 w-full rounded-2xl border border-line bg-surface-2 p-4 text-left">
               <div className="flex justify-between text-sm">
                 <span className="text-ink-soft">Items</span>
                 <span className="font-medium text-ink">
@@ -290,6 +310,9 @@ export default function Checkout() {
             </p>
 
             <div className="mt-7 flex w-full flex-col gap-2 sm:flex-row">
+              <Link href="/Delivery" className="btn-secondary text-xs flex-1">
+                Delivery details
+              </Link>
               <Link href="/Orders" className="btn-primary flex-1">
                 Track my order
               </Link>
