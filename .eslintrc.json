@@ -1,3 +1,11 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "overrides": [
+    {
+      "files": ["supabase/schema.sql"],
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": { "ecmaVersion": "latest" },
+      "rules": {}
+    }
+  ]
 }

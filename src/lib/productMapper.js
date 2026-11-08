@@ -119,6 +119,8 @@ export function toOrderItem(row) {
   return {
     id: row.id,
     productId: row.product_id,
+    variantValue: row.variant_value || null,
+    variantLabel: row.variant_label || null,
     title: row.title,
     sku: row.sku,
     price: row.unit_price,

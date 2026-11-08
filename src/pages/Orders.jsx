@@ -226,9 +226,9 @@ export default function Orders() {
                           href={item.productId ? `/ProductPreview?id=${item.productId}` : "/shop"}
                           className="block truncate text-sm font-medium text-ink hover:text-accent"
                         >
-                          {item.title}
+                          {item.title}{item.variantLabel ? ` · ${item.variantLabel}` : ""}
                         </Link>
-                        <p className="text-[11px] text-muted">Qty {item.qty} · {item.sku}</p>
+                        <p className="text-[11px] text-muted">Qty {item.qty}{item.variantLabel ? ` · ${item.variantLabel}` : ""}{item.sku ? ` · SKU ${item.sku}` : ""}</p>
                       </div>
                       <span className="text-sm text-ink-soft">
                         {formatNaira(item.lineTotal ?? item.price * item.qty)}

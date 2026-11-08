@@ -139,15 +139,17 @@ create table if not exists public.orders (
 );
 
 create table if not exists public.order_items (
-  id         uuid primary key default gen_random_uuid(),
-  order_id   uuid not null references public.orders (id) on delete cascade,
-  product_id uuid references public.products (id) on delete set null,
-  title      text not null,
-  sku        text not null,
-  unit_price integer not null,
-  qty        integer not null check (qty > 0),
-  line_total integer not null,
-  image      text not null default ''
+  id             uuid primary key default gen_random_uuid(),
+  order_id       uuid not null references public.orders (id) on delete cascade,
+  product_id     uuid references public.products (id) on delete set null,
+  variant_value  text,
+  variant_label  text,
+  title          text not null,
+  sku            text not null,
+  unit_price     integer not null,
+  qty            integer not null check (qty > 0),
+  line_total     integer not null,
+  image          text not null default ''
 );
 
 create table if not exists public.order_events (
@@ -692,11 +694,13 @@ begin
     now()
   ) returning * into v_order;
 
-  insert into public.order_items (order_id, product_id, title, sku, unit_price, qty, line_total, image)
+  insert into public.order_items (order_id, product_id, variant_value, variant_label, title, sku, unit_price, qty, line_total, image)
   select
     v_order.id,
     (line ->> 'product_id')::uuid,
-    line ->> 'title',
+    nullif(line ->> 'variant_value', ''),
+    nullif(line ->> 'variant_label', ''),
+    coalesce(nullif(line ->> 'variant_label', ''), line ->> 'title'),
     line ->> 'sku',
     (line ->> 'unit_price')::integer,
     (line ->> 'qty')::integer,

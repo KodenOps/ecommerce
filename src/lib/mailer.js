@@ -3,6 +3,16 @@ import { downloadObject } from "@/lib/supabase/storage";
 
 const DEFAULT_ADMIN_EMAIL = "femifadiya.segun@gmail.com";
 
+function escapeHtml(value) {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function getMailConfig() {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
@@ -57,6 +67,15 @@ export async function sendOrderPlacedEmail({
     }
   }
 
+  const itemsLines = (order.items || [])
+    .map(
+      (item) =>
+        `        <li><strong>${escapeHtml(item.title || "Product")}</strong>${item.variantLabel ? ` — ${escapeHtml(item.variantLabel)}` : ""}
+          <br />Qty ${item.qty} × ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? `<br /><span style="color:#6b7280;font-size:0.9em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
+        </li>`
+    )
+    .join("\n");
+
   const subject = `New order ${order.reference} is awaiting payment confirmation`;
   const text = [
     "A new order has been placed and is awaiting payment confirmation.",
@@ -66,6 +85,10 @@ export async function sendOrderPlacedEmail({
     `Phone: ${customer.phone || "Not provided"}`,
     `Email: ${customer.email || "Not provided"}`,
     `Coupon used: ${promoCode}`,
+    "Items:",
+    ...(order.items || []).flatMap((item) => [
+      `  - ${item.title}${item.variantLabel ? ` (${item.variantLabel})` : ""} × ${item.qty} @ ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? ` [SKU ${item.sku}]` : ""}`,
+    ]),
     `Total: ${formattedTotal}`,
     `Order URL: ${orderUrl}`,
     "",
@@ -78,14 +101,35 @@ export async function sendOrderPlacedEmail({
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
       <h2 style="margin-bottom: 12px; color: #111827;">New order pending payment confirmation</h2>
       <p>A new order has been placed and is awaiting payment confirmation.</p>
-      <ul style="padding-left: 18px; margin: 12px 0;">
-        <li><strong>Reference:</strong> ${order.reference}</li>
-        <li><strong>Customer:</strong> ${customer.name || "Unknown customer"}</li>
-        <li><strong>Phone:</strong> ${customer.phone || "Not provided"}</li>
-        <li><strong>Email:</strong> ${customer.email || "Not provided"}</li>
-        <li><strong>Coupon used:</strong> ${promoCode}</li>
-        <li><strong>Total:</strong> ${formattedTotal}</li>
-      </ul>
+      <p><strong>Customer:</strong> ${escapeHtml(customer.name || "Unknown customer")}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(customer.phone || "Not provided")}</p>
+      <p><strong>Email:</strong> ${escapeHtml(customer.email || "Not provided")}</p>
+      <p><strong>Coupon used:</strong> ${escapeHtml(String(promoCode))}</p>
+      <table style="width:100%;border-collapse:collapse;margin:12px 0;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="text-align:left;padding:8px;border:1px solid #e5e7eb;">Item</th>
+            <th style="text-align:right;padding:8px;border:1px solid #e5e7eb;">Qty</th>
+            <th style="text-align:right;padding:8px;border:1px solid #e5e7eb;">Line total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${order.items
+            .map(
+              (item) => `
+            <tr style="border-bottom:1px solid #e5e7eb;">
+              <td style="padding:8px;border:1px solid #e5e7eb;">
+                <strong>${escapeHtml(item.title || "Product")}</strong>${(item.variantLabel || item.variantValue) ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(item.variantLabel || item.variantValue)}</span>` : ""}
+                ${item.sku ? `<br/><span style="color:#9ca3af;font-size:0.85em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
+              </td>
+              <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${item.qty}</td>
+              <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${formatNaira(item.lineTotal)}</td>
+            </tr>`,
+            )
+            .join("\n")}
+        </tbody>
+      </table>
+      <p style="margin:12px 0;"><strong>Total:</strong> ${formattedTotal}</p>
       <p><strong>Order URL:</strong> <a href="${orderUrl}">${orderUrl}</a></p>
       <p>Please review the payment receipt and confirm payment in the admin dashboard.</p>
       <p style="margin-top: 14px;">QueenFizzie Admin</p>

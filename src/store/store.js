@@ -277,8 +277,25 @@ export function StoreProvider({ children }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: details.customer ?? {},
-          items: cart.map((line) => ({ productId: line.id, qty: line.qty })),
+          customer: details.customer ?? {},              items: cart.map((line) => {
+            const product = catalog.find((item) => String(item.id) === String(line.id));
+            const variantByValue =
+              product?.sizes?.find((size) => String(size.value) === String(line.variant?.value)) || null;
+            const variantLabel =
+              line.variant?.label ?? variantByValue?.label ?? null;
+            const variantValue =
+              line.variant?.value ?? variantByValue?.value ?? null;
+            return {
+              productId: line.id,
+              qty: line.qty,
+              variantValue: variantValue ?? null,
+              variantLabel: variantLabel ?? null,
+              title: product?.title || "",
+              sku: product?.sku || "",
+              price: line.price,
+              image: product?.image || "",
+            };
+          }),
           receipt: {
             dataUrl: details.receipt.dataUrl,
             name: details.receipt.name,

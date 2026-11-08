@@ -677,6 +677,9 @@ export default function Checkout() {
                     <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="min-w-0">
                         <span className="block truncate text-sm text-ink">{item.title}</span>
+                        {item.variantLabel && (
+                          <span className="block truncate text-[11px] text-accent">{item.variantLabel}</span>
+                        )}
                         <span className="text-[11px] text-muted">Qty {item.qty}</span>
                       </span>
                       <span className="text-sm font-medium text-ink">

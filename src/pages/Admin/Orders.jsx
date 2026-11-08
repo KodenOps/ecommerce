@@ -145,7 +145,7 @@ function OrderCard({ order, onChange, onError }) {
       </div>
 
       <div className="flex flex-col gap-1 px-4 py-2 text-[11px] text-muted sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
-        <span>{paymentLabel(order.paymentStatus)} · {order.promoCode || "no promo"} · {order.items.length} line(s)</span>
+        <span>{paymentLabel(order.paymentStatus)} · {order.promoCode || "no promo"} · {order.items.length} line(s){order.items.some((item) => item.variantLabel)} {order.items.some((item) => item.variantLabel) ? `· variants picked` : ""}</span>
         <span>{ORDER_STATUS_HINTS[order.status]}</span>
       </div>
 
@@ -180,10 +180,17 @@ function OrderCard({ order, onChange, onError }) {
             <ul className="divide-y divide-line rounded-2xl border border-line">
               {order.items.map((item) => (
                 <li key={item.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="min-w-0 truncate text-xs text-ink">
-                    {item.title} <span className="text-muted">×{item.qty}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs text-ink">{item.title}</span>
+                    {item.variantLabel && (
+                      <span className="block truncate text-[10px] text-accent">{item.variantLabel}</span>
+                    )}
+                    <span className="text-[10px] text-muted">Qty {item.qty}</span>
+                    {item.sku && (
+                      <span className="block truncate text-[10px] text-muted">SKU {item.sku}</span>
+                    )}
                   </span>
-                  <span className="text-xs text-ink-soft">{formatNaira(item.lineTotal)}</span>
+                  <span className="shrink-0 text-xs font-medium text-ink">{formatNaira(item.lineTotal)}</span>
                 </li>
               ))}
             </ul>

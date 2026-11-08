@@ -42,9 +42,15 @@ export default async function handler(req, res) {
     .map((item) => ({
       product_id: String(item?.productId || item?.product_id || item?.id || ""),
       qty: Math.min(20, Math.max(1, readInt(item?.qty, 1))),
+      variant_value: cleanText(item?.variantValue, 60) || null,
+      variant_label: cleanText(item?.variantLabel, 80) || null,
+      title: cleanText(item?.title, 120) || null,
+      sku: cleanText(item?.sku, 60) || null,
+      unit_price: readInt(item?.price, 0),
+      line_total: readInt(item?.price, 0) * readInt(item?.qty, 1),
+      image: cleanText(item?.image || item?.imageUrl || "", 500) || null,
     }))
     .filter((item) => item.product_id);
-
   if (!items.length) return sendJson(res, 400, { error: "Your bag is empty." });
 
   const phone = normalizePhone(body.customer?.phone || profile.phone);
@@ -80,7 +86,17 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase.rpc("place_order", {
     p_customer: customer,
-    p_items: items,
+    p_items: items.map((item) => ({
+      product_id: item.product_id,
+      qty: item.qty,
+      variant_value: item.variant_value,
+      variant_label: item.variant_label,
+      title: item.title,
+      sku: item.sku,
+      unit_price: item.unit_price,
+      line_total: item.line_total,
+      image: item.image,
+    })),
     p_promo: cleanText(body.promoCode, 24) || null,
     p_receipt: {
       path: uploaded.path,
