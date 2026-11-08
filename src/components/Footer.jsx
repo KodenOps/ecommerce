@@ -1,15 +1,16 @@
 import React from "react";
 import Link from "next/link";
-import { FaInstagram, FaTiktok } from "react-icons/fa";
+import { FaInstagram, FaTelegramPlane, FaWhatsapp } from "react-icons/fa";
 import { FiArrowRight, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { GiQueenCrown } from "react-icons/gi";
 import { SOCIAL, FOOTER_ROUTES, STORE } from "@/data/nigeria";
 
 const SOCIAL_LINKS = [
   { label: "Instagram", href: SOCIAL.instagram, icon: FaInstagram },
-  { label: "Telegram", href: SOCIAL.telegram, icon: FaTiktok },
-  { label: "WhatsApp", href: SOCIAL.whatsapp, icon: FaTiktok },
+  { label: "Telegram", href: SOCIAL.telegram, icon: FaTelegramPlane },
+  { label: "WhatsApp", href: SOCIAL.whatsapp, icon: FaWhatsapp },
 ];
+
 
 const COLUMNS = [
   {
