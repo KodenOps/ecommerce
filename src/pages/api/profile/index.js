@@ -82,6 +82,9 @@ export default async function handler(req, res) {
   if (body.marketingOptIn !== undefined) {
     updates.marketing_opt_in = Boolean(body.marketingOptIn);
   }
+  if (body.pushOptIn !== undefined) {
+    updates.push_opt_in = Boolean(body.pushOptIn);
+  }
 
   if (!Object.keys(updates).length) {
     return sendJson(res, 400, { error: "Nothing to update." });
@@ -104,6 +107,7 @@ export default async function handler(req, res) {
       fullName: `${data.first_name} ${data.last_name}`.trim(),
       phone: data.phone,
       marketingOptIn: data.marketing_opt_in,
+      pushOptIn: data.push_opt_in ?? false,
     },
   });
 }

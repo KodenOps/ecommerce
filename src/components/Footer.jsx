@@ -1,9 +1,15 @@
 import React from "react";
 import Link from "next/link";
-import { FaFacebookF, FaInstagram, FaTiktok } from "react-icons/fa";
+import { FaInstagram, FaTiktok } from "react-icons/fa";
 import { FiArrowRight, FiMail, FiMapPin, FiPhone } from "react-icons/fi";
 import { GiQueenCrown } from "react-icons/gi";
-import { STORE } from "@/data/nigeria";
+import { SOCIAL, FOOTER_ROUTES, STORE } from "@/data/nigeria";
+
+const SOCIAL_LINKS = [
+  { label: "Instagram", href: SOCIAL.instagram, icon: FaInstagram },
+  { label: "Telegram", href: SOCIAL.telegram, icon: FaTiktok },
+  { label: "WhatsApp", href: SOCIAL.whatsapp, icon: FaTiktok },
+];
 
 const COLUMNS = [
   {
@@ -66,11 +72,13 @@ const Footer = () => {
               100% original, tested &amp; trusted.
             </p>
             <div className="mt-5 flex items-center gap-2">
-              {[FaInstagram, FaTiktok, FaFacebookF].map((Icon, index) => (
+              {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
                 <a
-                  key={index}
-                  href="#"
-                  aria-label="Social link"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
                   className="btn-icon h-9 w-9 hover:text-accent"
                 >
                   <Icon size={14} />
@@ -137,15 +145,15 @@ const Footer = () => {
         <div className="flex flex-col items-center justify-between gap-3 text-xs text-muted sm:flex-row">
           <p>© {new Date().getFullYear()} {STORE.name}. Made in Lagos, Nigeria.</p>
           <div className="flex items-center gap-5">
-            <Link href="/Contact" className="transition-colors hover:text-accent">
-              Privacy
-            </Link>
-            <Link href="/Contact" className="transition-colors hover:text-accent">
-              Terms
-            </Link>
-            <Link href="/Contact" className="transition-colors hover:text-accent">
-              Delivery
-            </Link>
+            {Object.entries(FOOTER_ROUTES).map(([label, href]) => (
+              <Link
+                key={label}
+                href={href}
+                className="transition-colors hover:text-accent"
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>

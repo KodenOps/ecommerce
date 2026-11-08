@@ -368,16 +368,26 @@ export default function Account() {
                   <label htmlFor="email" className="label">Email (sign-in)</label>
                   <input id="email" value={user.email} readOnly className="field mt-1.5 opacity-70" />
                 </div>
-              </div>
-
-              <label className="mt-4 flex items-start gap-2.5 rounded-2xl border border-line bg-surface-2/60 p-3 text-xs text-ink-soft">
+              </div>              <label className="mt-4 flex items-start gap-2.5 rounded-2xl border border-line bg-surface-2/60 p-3 text-xs text-ink-soft">
                 <input
                   type="checkbox"
                   checked={profile.marketingOptIn}
                   onChange={(event) => setProfile({ ...profile, marketingOptIn: event.target.checked })}
                   className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent))]"
                 />
+
                 Send me new-drop and promo notifications.
+              </label>
+
+              <label className="mt-4 flex items-start gap-2.5 rounded-2xl border border-line bg-surface-2/60 p-3 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={profile.pushOptIn}
+                  onChange={(event) => setProfile({ ...profile, pushOptIn: event.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-[rgb(var(--accent))]"
+                />
+
+                Push notifications on this device.
               </label>
 
               <div className="mt-4 flex flex-col gap-2">

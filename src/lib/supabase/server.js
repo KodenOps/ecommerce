@@ -75,6 +75,7 @@ export function toPublicUser(supabase, profile) {
     isAdmin: profile.role === "ADMIN",
     avatarUrl: avatarPublicUrl(supabase, profile),
     marketingOptIn: Boolean(profile.marketing_opt_in),
+    pushOptIn: Boolean(profile.push_opt_in ?? false),
     createdAt: profile.created_at,
   };
 }

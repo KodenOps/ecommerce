@@ -1,17 +1,24 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FiDownload, FiWifiOff, FiX } from "react-icons/fi";
+import { useAuth } from "./AuthProvider";
 
 /**
- * Registers the service worker and shows a small "offline" / "install" hint.
- * The app shell is cached by /sw.js so the storefront opens without a network.
+ * Registers the service worker, shows the install prompt for the PWA, and —
+ * once the user is signed in — registers the browser push subscription so
+ * announcements fan out to their device.
  */
 export default function PwaRegister() {
   const [offline, setOffline] = useState(false);
   const [pathname, setPathname] = useState("/");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [dismissed, setDismissed] = useState(true);
+  const [pushOk, setPushOk] = useState(null);
+  const userRef = useRef(null);
+
+  const { user, loading } = useAuth();
+  useEffect(() => { userRef.current = user; }, [user]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
@@ -50,6 +57,40 @@ export default function PwaRegister() {
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
+
+  // Register push for the signed-in user, once the worker is ready and the
+  // account has opted in. The opt-in flag lives on the account page (/Account).
+  useEffect(() => {
+    if (loading || !user || userRef.current?.pushOptIn !== true) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await fetch("/api/push");
+        if (!res.ok) throw new Error("Push config unavailable");
+        const { vapidPublicKey } = await res.json();
+        if (!vapidPublicKey) throw new Error("No push key");
+
+        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscription: sub }),
+        });
+        if (!cancelled) setPushOk(true);
+      } catch (error) {
+        if (!cancelled) setPushOk(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [loading, user]);
 
   const install = async () => {
     if (!installPrompt) return;
@@ -96,4 +137,15 @@ export default function PwaRegister() {
       )}
     </>
   );
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }

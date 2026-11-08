@@ -149,7 +149,44 @@ public/
   manifest.webmanifest PWA manifest
   sw.js                App-shell service worker + offline fallback
   icons/               Install icons (regular, maskable, apple-touch)
+
+## Push notifications
+
+The storefront sends native push notifications to anyone who installs the PWA and
+opts in from their account page. When an admin sends an announcement through the
+inbox, the same `{title, body}` is delivered to every subscribed browser via the
+standard [webpush](https://developer.mozilla.org/en-US/docs/Web/API/Push_API) flow
+— no external provider, no paid service.
+
+### What each part does
+
+| File | Role |
+| --- | --- |
+| `public/sw.js` | Service-worker scope for the installable shell; does not handle push yet |
+| `src/lib/webpush.js` | Encodes and signs one notification with the VAPID keys and POSTs it to a browser endpoint |
+| `src/pages/api/push.js` | Stores/removes each user's push subscription after sign-in |
+| `src/pages/api/admin/broadcast.js` | After writing the notification rows, fans the message to every subscribed customer |
+
+### Env vars (host, not the repo)
+
+Add these to the host environment (Vercel/FLY/etc.). They are **never** committed.
+
+```env
+WEBPUSH_VAPID_PUBLIC_KEY_BASE64URL=<base64url of the VAPID public key>
+WEBPUSH_VAPID_PRIVATE_KEY_BASE64URL=<base64url of the VAPID private key>
+WEBPUSH_VAPID_EMAIL=you@queenfizzie.com
 ```
+
+Generate a pair with `npx web-push generate-vapid-keys` and keep the private key
+with the public key in the host. The client gets only the public key at
+`/api/push`.
+
+### Client behaviour
+
+- After sign-in, `AuthProvider` calls `navigator.pushManager.subscribe` using the
+  key from `/api/push` and posts the subscription to `/api/push`.
+- The opt-in is user-initiated and revocable from `/Account`.
+- Push delivery is best-effort: dead endpoints are cleaned up server-side.
 
 ## Security model
 

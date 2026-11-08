@@ -1,22 +1,17 @@
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-const AuthContext = createContext({
-  user: null,
-  loading: true,
-  unreadCount: 0,
-  refresh: async () => {},
-  setUnreadCount: () => {},
-  signOut: async () => {},
-});
+const AuthContext = React.createContext(
+  {
+    user: null,
+    loading: true,
+    unreadCount: 0,
+    refresh: async () => {},
+    setUnreadCount: () => {},
+    signOut: async () => {},
+  }
+);
 
 export function AuthProvider({ children, initialUser = null }) {
   const [user, setUser] = useState(initialUser);
