@@ -93,8 +93,9 @@ const toRepoPayload = (item) => ({
 export default function AdminProductRepo() {
   const [repoItems, setRepoItems] = useState([]);
   const [repoQuery, setRepoQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [repoEditor, setRepoEditor] = useState(null);
-  const [state, setState] = useState({ loading: true, syncing: false, error: "", ok: "" });
+  const [state, setState] = useState({ loading: true, syncing: false, saving: false, error: "", ok: "" });
 
   const loadRepo = useCallback(async () => {
     const sourceItems = getProductRepoEntries().map(normalizeRepoProduct);
@@ -165,11 +166,8 @@ export default function AdminProductRepo() {
 
     setRepoItems(merged);
     setRepoEditor((current) => {
-      if (current) {
-        const match = merged.find((item) => item.id === current.id);
-        return match || merged[0] || null;
-      }
-      return merged[0] || null;
+      if (!current) return null;
+      return merged.find((item) => item.id === current.id) || current;
     });
   }, []);
 
@@ -189,9 +187,25 @@ export default function AdminProductRepo() {
   }, []);
 
   const syncRepo = useCallback(async () => {
+    // Only items already in the store are pushed, and their existing status is
+    // preserved, so syncing never publishes a repo item on its own.
+    const liveItems = repoItems
+      .filter((item) => item.liveProductId)
+      .map((item) => ({ ...item, listed: item.liveStatus === "ACTIVE" }));
+
+    if (!liveItems.length) {
+      setState((current) => ({
+        ...current,
+        syncing: false,
+        ok: "",
+        error: "No repo items are in the store yet. Search for an item and use Add To Store first.",
+      }));
+      return;
+    }
+
     setState((current) => ({ ...current, syncing: true, error: "", ok: "" }));
     try {
-      const payload = await pushRepoItems(repoItems);
+      const payload = await pushRepoItems(liveItems);
       setState((current) => ({
         ...current,
         syncing: false,
@@ -219,13 +233,18 @@ export default function AdminProductRepo() {
     };
   }, [loadRepo]);
 
-  const filteredRepoItems = useMemo(() => {
-    const query = repoQuery.trim().toLowerCase();
-    if (!query) return repoItems;
+  const searchResults = useMemo(() => {
+    const query = submittedQuery.trim().toLowerCase();
+    if (!query) return [];
     return repoItems.filter((item) => [item.name, item.brand, item.category, item.sku, item.id].some((value) =>
       String(value || "").toLowerCase().includes(query)
     ));
-  }, [repoItems, repoQuery]);
+  }, [repoItems, submittedQuery]);
+
+  const runSearch = (event) => {
+    event?.preventDefault();
+    setSubmittedQuery(repoQuery.trim());
+  };
 
   const openRepoEditor = (item) => {
     setRepoEditor({ ...item, sizes: Array.isArray(item?.sizes) ? item.sizes.map((size) => ({ ...size })) : [] });
@@ -312,13 +331,25 @@ export default function AdminProductRepo() {
     }
 
     setState((current) => ({ ...current, saving: true, error: "", ok: "" }));
-    try {
-      await pushRepoItems([savedItem]);
-      await loadRepo();
+
+    if (!savedItem.liveProductId) {
+      closeRepoEditor();
       setState((current) => ({
         ...current,
         saving: false,
-        ok: `${savedItem.name} was saved ${savedItem.listed ? "and is live in the shop." : "as a draft."}`,
+        ok: `${savedItem.name} was saved in the repo. Use Add to store to publish it.`,
+      }));
+      return;
+    }
+
+    try {
+      await pushRepoItems([{ ...savedItem, listed: savedItem.liveStatus === "ACTIVE" }]);
+      await loadRepo();
+      closeRepoEditor();
+      setState((current) => ({
+        ...current,
+        saving: false,
+        ok: `${savedItem.name} was saved and updated in the shop.`,
       }));
     } catch (error) {
       setState((current) => ({
@@ -329,22 +360,11 @@ export default function AdminProductRepo() {
     }
   };
 
-  const toggleRepoListing = (repoId) => {
-    const nextItems = repoItems.map((item) =>
-      item.id === repoId ? { ...item, listed: !item.listed } : item
-    );
-    setRepoItems(nextItems);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextItems));
-    }
-  };
-
-  const importRepoItem = async (repoItem) => {
-    const listedItem = { ...repoItem, listed: true };
+  const addToStore = async (repoItem) => {
     setState((current) => ({ ...current, saving: true, error: "", ok: "" }));
 
     try {
-      await pushRepoItems([listedItem]);
+      await pushRepoItems([{ ...repoItem, listed: true }]);
       await loadRepo();
       setState((current) => ({
         ...current,
@@ -355,34 +375,7 @@ export default function AdminProductRepo() {
       setState((current) => ({
         ...current,
         saving: false,
-        error: error.message || "Could not import that repo item.",
-      }));
-    }
-  };
-
-  const importListedRepoItems = async () => {
-    const selected = repoItems.filter((item) => item.listed);
-    if (!selected.length) {
-      setState((current) => ({ ...current, error: "Select at least one repo item to list." }));
-      return;
-    }
-
-    setState((current) => ({ ...current, saving: true, error: "", ok: "" }));
-    try {
-      // Send the whole bank so unselected items are explicitly kept as drafts.
-      await pushRepoItems(repoItems);
-      await loadRepo();
-      setState((current) => ({
-        ...current,
-        saving: false,
-        ok: `Listed ${selected.length} repo products in the storefront.`,
-        error: "",
-      }));
-    } catch (error) {
-      setState((current) => ({
-        ...current,
-        saving: false,
-        error: error.message || "Could not sync the selected repo items.",
+        error: error.message || "Could not add that repo item to the store.",
       }));
     }
   };
@@ -391,7 +384,7 @@ export default function AdminProductRepo() {
     <AdminShell
       eyebrow="Catalogue"
       title="Product repository"
-      description="Manage the source product bank, edit their details, upload a product photo, and import the selected items into the storefront."
+      description="Search the source product bank, edit an item, then add it to the storefront when it is ready to sell."
       actions={
         <div className="flex items-center gap-2">
           <button type="button" onClick={syncRepo} className="btn-secondary">
@@ -404,81 +397,67 @@ export default function AdminProductRepo() {
       }
     >
       <div className="card overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-line px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="label">Repository</p>
             <p className="text-sm font-semibold text-ink">{repoItems.length} banked items</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={importListedRepoItems} className="btn-secondary text-xs">
-              List selected
+          <form onSubmit={runSearch} className="flex w-full items-center gap-2 md:w-auto">
+            <input
+              value={repoQuery}
+              onChange={(event) => setRepoQuery(event.target.value)}
+              className="field w-full md:w-64"
+              placeholder="Search repo items"
+              aria-label="Search repo items"
+            />
+            <button type="submit" className="btn-primary shrink-0 text-xs">
+              Search
             </button>
+          </form>
+        </div>
+
+        {submittedQuery && (
+          <div className="divide-y divide-line border-t border-line">
+            {searchResults.map((item) => (
+              <div key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-line bg-surface-2">
+                  {item.image ? <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover" /> : null}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">{item.name}</p>
+                  <p className="text-[11px] text-muted">{item.brand} · {item.category}</p>
+                </div>
+
+                <div className="text-right text-sm font-semibold text-ink">{formatNaira(item.price)}</div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => addToStore(item)}
+                    disabled={state.saving}
+                    className="btn-primary px-3 py-1.5 text-[11px]"
+                  >
+                    Add To Store
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openRepoEditor(item)}
+                    className="btn-secondary px-3 py-1.5 text-[11px]"
+                  >
+                    Edit Item
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {searchResults.length === 0 && (
+              <p className="px-4 py-10 text-center text-sm text-ink-soft">
+                No repo items match “{submittedQuery}”.
+              </p>
+            )}
           </div>
-        </div>
-
-        <div className="border-b border-line px-4 py-3">
-          <input
-            value={repoQuery}
-            onChange={(event) => setRepoQuery(event.target.value)}
-            className="field w-full"
-            placeholder="Search repo items"
-          />
-        </div>
-
-        <div className="divide-y divide-line">
-          {filteredRepoItems.map((item) => {
-            const liveLabel =
-              item.liveStatus === "ACTIVE"
-                ? "Listed"
-                : item.liveStatus === "ARCHIVED"
-                  ? "Archived"
-                  : item.liveStatus === "DRAFT"
-                    ? "Draft"
-                    : item.listed
-                      ? "Ready"
-                      : "Draft";
-            const isLive = item.liveStatus === "ACTIVE";
-
-            return (
-            <div key={item.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-line bg-surface-2">
-                {item.image ? <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover" /> : null}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">{item.name}</p>
-                <p className="text-[11px] text-muted">{item.brand} · {item.category}</p>
-              </div>
-
-              <div className="text-right text-sm font-semibold text-ink">{formatNaira(item.price)}</div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleRepoListing(item.id)}
-                  className={`rounded-full px-2 py-1 text-[10px] font-medium ${
-                    isLive || (!item.liveStatus && item.listed)
-                      ? "bg-accent text-white"
-                      : "border border-line bg-surface-2 text-muted"
-                  }`}
-                >
-                  {liveLabel}
-                </button>
-                <button type="button" onClick={() => openRepoEditor(item)} className="btn-secondary text-[10px] px-2 py-1">
-                  Edit
-                </button>
-                <button type="button" onClick={() => importRepoItem(item)} className="btn-secondary text-[10px] px-2 py-1">
-                  Import
-                </button>
-              </div>
-            </div>
-            );
-          })}
-
-          {filteredRepoItems.length === 0 && !state.syncing && (
-            <p className="px-4 py-10 text-center text-sm text-ink-soft">No repo items found. Sync the source file to load it.</p>
-          )}
-        </div>
+        )}
       </div>
 
       {repoEditor && (
@@ -490,7 +469,11 @@ export default function AdminProductRepo() {
                 <h2 className="font-display text-xl text-ink">{repoEditor.name}</h2>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" onClick={saveRepoItem} className="btn-secondary text-xs">
+                <button
+                  type="button"
+                  onClick={saveRepoItem}
+                  className="btn-secondary hidden text-xs md:inline-flex"
+                >
                   <FiSave size={12} /> Save item
                 </button>
                 <button type="button" onClick={closeRepoEditor} className="btn-icon h-8 w-8" aria-label="Close repo editor">
@@ -562,7 +545,7 @@ export default function AdminProductRepo() {
                   </div>
 
                   <div>
-                    <div className="mb-2 flex items-center justify-between">
+                    <div className="mb-2 flex items-center justify-between gap-2">
                       <label className="label">Sizes</label>
                       <button type="button" onClick={addRepoSize} className="btn-secondary text-[10px] px-2 py-1">
                         <FiPlus size={10} /> Add size
@@ -594,6 +577,17 @@ export default function AdminProductRepo() {
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  <div className="border-t border-line pt-3 md:hidden">
+                    <button
+                      type="button"
+                      onClick={saveRepoItem}
+                      disabled={state.saving}
+                      className="btn-primary w-full"
+                    >
+                      <FiSave size={14} /> {state.saving ? "Saving…" : "Save item"}
+                    </button>
                   </div>
                 </div>
               </div>

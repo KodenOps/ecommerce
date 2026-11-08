@@ -119,7 +119,6 @@ function Header({ onOpenMenu, pathname }) {
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             <NotificationBell />
-            <ProfileMenu compact />
             <Link
               href="/Cart"
               className="btn-icon relative"
@@ -133,6 +132,9 @@ function Header({ onOpenMenu, pathname }) {
                 </span>
               )}
             </Link>
+            <div className="hidden lg:block">
+              <ProfileMenu compact />
+            </div>
             <button
               type="button"
               onClick={onOpenMenu}

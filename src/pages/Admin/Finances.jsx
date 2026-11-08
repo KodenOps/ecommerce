@@ -90,20 +90,22 @@ export default function AdminFinances() {
           </span>
         </div>
 
-        <div className="mt-5 flex h-40 items-end gap-3">
+        <div className="mt-5 flex h-52 items-stretch gap-2 sm:gap-3">
           {monthly.map((month) => (
-            <div key={month.month} className="flex flex-1 flex-col items-center gap-2">
-              <span className="text-[10px] font-semibold text-ink-soft">
+            <div key={month.month} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+              <span className="h-4 w-full truncate text-center text-[10px] font-semibold tabular-nums text-ink-soft">
                 {month.revenue > 0 ? formatNaira(month.revenue) : ""}
               </span>
-              <div className="flex h-full w-full items-end rounded-xl bg-surface-2">
+              <div className="flex min-h-0 w-full flex-1 items-end rounded-xl bg-surface-2">
                 <div
                   className="w-full rounded-xl bg-gradient-to-t from-accent to-violet transition-all duration-500"
                   style={{ height: `${Math.max(4, (month.revenue / peak) * 100)}%` }}
-                  title={`${month.orders} paid orders`}
+                  title={`${formatNaira(month.revenue)} · ${month.orders} paid orders`}
                 />
               </div>
-              <span className="text-[10px] uppercase tracking-wider text-muted">{month.label}</span>
+              <span className="w-full truncate text-center text-[10px] uppercase tracking-wider text-muted">
+                {month.label}
+              </span>
             </div>
           ))}
           {monthly.length === 0 && <p className="w-full text-center text-xs text-muted">No data yet.</p>}

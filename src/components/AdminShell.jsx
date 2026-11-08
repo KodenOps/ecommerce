@@ -18,7 +18,6 @@ import {
 import { GiQueenCrown } from "react-icons/gi";
 import ThemeToggle from "./ThemeToggle";
 import NotificationBell from "./NotificationBell";
-import ProfileMenu from "./ProfileMenu";
 import { useAuth } from "./AuthProvider";
 
 const LINKS = [
@@ -34,7 +33,7 @@ const LINKS = [
 
 export default function AdminShell({ children, title, eyebrow, description, actions = null }) {
   const router = useRouter();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
 
   const isActive = (href) => router.pathname === href;
@@ -43,15 +42,7 @@ export default function AdminShell({ children, title, eyebrow, description, acti
     <div className="min-h-screen bg-canvas">
       <header className="glass sticky top-0 z-40 border-b border-line/80">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="btn-icon lg:hidden"
-              aria-label="Open admin menu"
-            >
-              <FiMenu size={17} />
-            </button>
+          <div className="flex min-w-0 items-center gap-3">
             <Link href="/Admin/Dashboard" className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-violet text-accent-ink shadow-glow">
                 <GiQueenCrown size={18} />
@@ -68,9 +59,15 @@ export default function AdminShell({ children, title, eyebrow, description, acti
           </div>
 
           <div className="flex items-center gap-2">
-            <ThemeToggle />
             <NotificationBell />
-            <ProfileMenu compact />
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="btn-icon lg:hidden"
+              aria-label="Open admin menu"
+            >
+              <FiMenu size={17} />
+            </button>
           </div>
         </div>
       </header>
@@ -153,6 +150,44 @@ export default function AdminShell({ children, title, eyebrow, description, acti
                   </Link>
                 );
               })}
+
+              <div className="divider my-2" />
+
+              <div className="flex items-center justify-between rounded-2xl border border-line bg-surface-2 px-3 py-2.5">
+                <span className="text-xs font-semibold text-ink-soft">Appearance</span>
+                <ThemeToggle />
+              </div>
+
+              {user && (
+                <Link
+                  href="/Account"
+                  onClick={() => setOpen(false)}
+                  className="mt-1 flex items-center gap-3 rounded-2xl border border-line bg-surface-2 p-3"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-line bg-surface text-xs font-bold text-accent">
+                    {user.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase()
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-ink">{user.fullName}</span>
+                    <span className="block truncate text-[11px] text-ink-soft">
+                      {user.phone || user.email}
+                    </span>
+                  </span>
+                </Link>
+              )}
+
+              <button
+                type="button"
+                onClick={signOut}
+                className="mt-1 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-medium text-accent hover:bg-accent-soft"
+              >
+                <FiLogOut size={16} /> Sign out
+              </button>
             </nav>
             <div className="border-t border-line p-3">
               <Link href="/" className="btn-secondary w-full" onClick={() => setOpen(false)}>

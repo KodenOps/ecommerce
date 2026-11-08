@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   FiAlertCircle,
@@ -113,6 +113,8 @@ export default function AdminProducts() {
   const [editingId, setEditingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [state, setState] = useState({ loading: true, saving: false, error: "", ok: "" });
+  const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: "" }));
@@ -170,6 +172,38 @@ export default function AdminProducts() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    products.forEach((product) => {
+      const key = product.category || "Uncategorised";
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [products]);
+
+  const categoryOptions = useMemo(
+    () => [...new Set([...CATEGORIES, ...categoryCounts.keys()])].map((category) => ({
+      category,
+      count: categoryCounts.get(category) || 0,
+    })),
+    [categoryCounts]
+  );
+
+  const visibleProducts = useMemo(() => {
+    const search = query.trim().toLowerCase();
+    return products.filter((product) => {
+      if (categoryFilter !== "All" && (product.category || "Uncategorised") !== categoryFilter) {
+        return false;
+      }
+      if (!search) return true;
+      return [product.title, product.sku, product.category, product.status].some((value) =>
+        String(value ?? "").toLowerCase().includes(search)
+      );
+    });
+  }, [categoryFilter, products, query]);
+
+  const filtersActive = query.trim().length > 0 || categoryFilter !== "All";
 
   const startEdit = (product) => {
     const images = Array.isArray(product.images) && product.images.length
@@ -381,15 +415,58 @@ export default function AdminProducts() {
       }
     >
       <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <div>
-            <p className="label">Inventory</p>
-            <p className="text-sm font-semibold text-ink">{products.length} products</p>
+        <div className="flex flex-col gap-3 border-b border-line px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="label">Inventory</p>
+              <p className="text-sm font-semibold text-ink">
+                {visibleProducts.length === products.length
+                  ? `${products.length} products`
+                  : `${visibleProducts.length} of ${products.length} products`}
+              </p>
+            </div>
+          </div>
+
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="field w-full"
+            placeholder="Search by name, SKU, category or status"
+            aria-label="Search products"
+          />
+
+          <div className="flex flex-wrap gap-2">
+            {[{ category: "All", count: products.length }, ...categoryOptions].map((option) => {
+              const active = categoryFilter === option.category;
+              return (
+                <button
+                  key={option.category}
+                  type="button"
+                  onClick={() => setCategoryFilter(option.category)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium transition-colors ${
+                    active
+                      ? "bg-accent text-accent-ink"
+                      : "border border-line bg-surface-2 text-ink-soft hover:text-ink"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {option.category === "All" ? "All categories" : option.category}
+                  <span
+                    className={`rounded-full px-1.5 text-[10px] font-bold tabular-nums ${
+                      active ? "bg-black/15" : "bg-surface text-muted"
+                    }`}
+                  >
+                    {option.count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div className="divide-y divide-line">
-          {products.map((product) => (
+          {visibleProducts.map((product) => (
             <div key={product.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-line bg-surface-2">
                 {product.image ? (
@@ -449,9 +526,11 @@ export default function AdminProducts() {
             </div>
           ))}
 
-          {products.length === 0 && !state.loading && (
+          {visibleProducts.length === 0 && !state.loading && (
             <p className="px-4 py-10 text-center text-sm text-ink-soft">
-              No products yet. Create the first one on the right.
+              {filtersActive
+                ? "No products match this search or category."
+                : "No products yet. Create the first one on the right."}
             </p>
           )}
         </div>
