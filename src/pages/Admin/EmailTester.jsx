@@ -5,12 +5,37 @@ import { FiSend, FiShield } from "react-icons/fi";
 import AdminShell from "@/components/AdminShell";
 import { adminPageProps } from "@/lib/routeGuards";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+
+function isEmail(value) {
+  return EMAIL_RE.test(String(value ?? "").trim());
+}
+
+function isNonEmpty(value) {
+  return String(value ?? "").trim().length > 0;
+}
+
+function isFormFilled(form) {
+  return isEmail(form.to) && isNonEmpty(form.subject) && isNonEmpty(form.body);
+}
+
+function formatFormError(form) {
+  const missing = [];
+  if (!isEmail(form.to)) missing.push("a valid recipient email");
+  if (!isNonEmpty(form.subject)) missing.push("a subject");
+  if (!isNonEmpty(form.body)) missing.push("a message body");
+  if (missing.length === 0) return "Fill in the recipient, subject and body.";
+  if (missing.length === 1) return `Add ${missing[0]}.`;
+  if (missing.length === 2) return `Add ${missing[0]} and ${missing[1]}.`;
+  return `Add ${missing[0]}, ${missing[1]}, and ${missing[2]}.`;
+}
+
 export async function getServerSideProps(ctx) {
   return adminPageProps(ctx);
 }
 
 export default function AdminEmailTester() {
-  const [state, setState] = useState({ loading: true, error: "", ok: "" });
+  const [state, setState] = useState({ loading: false, error: "", ok: "" });
   const [form, setForm] = useState({
     to: "",
     subject: "",
@@ -23,7 +48,18 @@ export default function AdminEmailTester() {
 
   const send = async (event) => {
     event.preventDefault();
-    setState((current) => ({ ...current, loading: false, error: "", ok: "" }));
+
+    if (!isFormFilled(form)) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: formatFormError(form),
+        ok: "",
+      }));
+      return;
+    }
+
+    setState((current) => ({ ...current, loading: true, error: "", ok: "" }));
     try {
       const response = await fetch("/api/admin/email-test", {
         method: "POST",
@@ -34,19 +70,26 @@ export default function AdminEmailTester() {
       if (!response.ok) {
         setState((current) => ({
           ...current,
-          error: payload.error || "Could not send that test email.",
+          loading: false,
+          error:
+            payload.error || "Could not send that test email.",
+          ok: "",
         }));
         return;
       }
       setState((current) => ({
         ...current,
+        loading: false,
         ok: payload.ok || "Test email sent.",
+        error: "",
       }));
       setForm({ to: "", subject: "", body: "" });
     } catch (failure) {
       setState((current) => ({
         ...current,
+        loading: false,
         error: "Could not send that test email. Check your connection.",
+        ok: "",
       }));
     }
   };
@@ -88,7 +131,9 @@ export default function AdminEmailTester() {
 
           <form onSubmit={send} className="flex flex-col gap-4 p-4">
             <div>
-              <label htmlFor="email-to" className="label">To</label>
+              <label htmlFor="email-to" className="label">
+                To
+              </label>
               <input
                 id="email-to"
                 type="email"
@@ -102,7 +147,9 @@ export default function AdminEmailTester() {
             </div>
 
             <div>
-              <label htmlFor="email-subject" className="label">Subject</label>
+              <label htmlFor="email-subject" className="label">
+                Subject
+              </label>
               <input
                 id="email-subject"
                 type="text"
@@ -116,7 +163,9 @@ export default function AdminEmailTester() {
             </div>
 
             <div>
-              <label htmlFor="email-body" className="label">Body</label>
+              <label htmlFor="email-body" className="label">
+                Body
+              </label>
               <textarea
                 id="email-body"
                 required
