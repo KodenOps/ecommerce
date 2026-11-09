@@ -33,27 +33,20 @@ const FIXED_CATEGORIES = [
   "Gifts & Sets",
 ];
 
-async function loadCategoriesFromApi(supabaseInstance) {
+async function fetchAdminCategories() {
   try {
-    const { data, error } = await supabaseInstance.rpc("categories_public").select("id, code, name, color, description");
-    if (error) {
-      const fallback = await supabaseInstance.from("categories").select("id, code, name, color, description").order("name", { ascending: true });
-      if (fallback.error) return [];
-      return (fallback.data || []).map((row) => ({
-        id: row.id,
+    const response = await fetch("/api/admin/categories", { cache: "no-store" });
+    if (!response.ok) return [];
+    const payload = await response.json().catch(() => ({}));
+    if (!Array.isArray(payload?.categories)) return [];
+    return payload.categories
+      .map((row) => ({
         code: String(row.code || "").trim(),
-        name: String(row.name || row.code).trim() || String(row.code).trim(),
+        name: String(row.name || row.code || "").trim(),
         color: String(row.color || "#1a1a1a").trim() || "#1a1a1a",
         description: String(row.description || ""),
-      }));
-    }
-    return (data || []).map((row) => ({
-      id: row.id,
-      code: String(row.code || "").trim(),
-      name: String(row.name || row.code).trim() || String(row.code).trim(),
-      color: String(row.color || "#1a1a1a").trim() || "#1a1a1a",
-      description: String(row.description || ""),
-    }));
+      }))
+      .filter((row) => row.name);
   } catch (error) {
     return [];
   }
@@ -159,10 +152,13 @@ export default function AdminProducts() {
   };
 
   useEffect(() => {
-    setCategories(FIXED_CATEGORIES);
-    loadCategoriesFromApi(null).then((attachedCategories) => {
-      setCategories(attachedCategories);
+    let cancelled = false;
+    fetchAdminCategories().then((rows) => {
+      if (!cancelled && rows.length) setCategories(rows);
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const load = useCallback(async () => {
@@ -232,12 +228,26 @@ export default function AdminProducts() {
   }, [products]);
 
   const categoryOptions = useMemo(
-    () => [...new Set([...CATEGORIES, ...categoryCounts.keys()])].map((category) => ({
+    () => [
+      ...new Set([
+        ...FIXED_CATEGORIES,
+        ...categories.map((item) => item.name),
+        ...categoryCounts.keys(),
+      ]),
+    ].map((category) => ({
       category,
       count: categoryCounts.get(category) || 0,
     })),
-    [categoryCounts]
+    [categories, categoryCounts]
   );
+
+  // The category picker offers the built-in categories plus anything the admin
+  // created in /Admin/Categories, and keeps the saved value selectable.
+  const categorySelectOptions = useMemo(() => {
+    const names = new Set([...FIXED_CATEGORIES, ...categories.map((item) => item.name)]);
+    if (form.category) names.add(form.category);
+    return [...names];
+  }, [categories, form.category]);
 
   const visibleProducts = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -686,7 +696,7 @@ export default function AdminProducts() {
                         onChange={(event) => setForm({ ...form, category: event.target.value })}
                         className="field mt-1.5 cursor-pointer"
                       >
-                        {FIXED_CATEGORIES.map((category) => (
+                        {categorySelectOptions.map((category) => (
                           <option key={category} value={category}>{category}</option>
                         ))}
                       </select>
