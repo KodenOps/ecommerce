@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -71,152 +69,176 @@ const Cart = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-4">
-              <div className="card overflow-hidden">
-                <div className="flex items-center gap-2 border-b border-line px-4 py-3 text-xs text-ink-soft">
-                  <FiTruck size={14} className="text-accent" />
-                  {remaining > 0 ? (
-                    <span>
-                      You&apos;re <strong className="text-ink">{formatNaira(remaining)}</strong> from free
-                      delivery
-                    </span>
-                  ) : (
-                    <span className="text-accent">Free delivery unlocked — nicely done</span>
-                  )}
-                  <div className="ml-auto hidden w-32 overflow-hidden rounded-full bg-surface-2 sm:block">
-                    <div
-                      className="h-1.5 rounded-full bg-gradient-to-r from-accent to-violet transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
+              <div className="overflow-x-auto scroll-smooth">
+                <div className="flex max-w-full items-stretch min-w-max gap-8 py-2 px-1 sm:block sm:overflow-visible sm:min-w-0 sm:p-0">
+                  <div className="flex w-full flex-col gap-4 sm:w-auto sm:max-w-[560px] lg:max-w-[760px]">
+                    <div className="card overflow-hidden">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-2 border-b border-line px-4 py-3 text-xs text-ink-soft">
+                        <span className="label">Items</span>
+                        <FiTruck size={14} className="text-accent shrink-0" />
+                        {remaining > 0 ? (
+                          <span>
+                            You&apos;re <strong className="text-ink">{formatNaira(remaining)}</strong> from free delivery
+                          </span>
+                        ) : (
+                          <span className="text-accent">Free delivery unlocked — nicely done</span>
+                        )}
+                        {remaining > 0 && (
+                          <div className="flex flex-1 items-center min-w-0 rounded-full bg-surface-2 overflow-hidden" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Free delivery progress">
+                            <div
+                              className="h-1.5 w-full shrink-0 rounded-full bg-gradient-to-r from-accent to-violet transition-all duration-500"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                        )}
+                        {remaining === 0 && (
+                          <span className="flex items-center gap-2 ml-auto text-accent">
+                            <span className="relative h-2 w-2 overflow-hidden rounded-full bg-accent border border-accent/40">
+                              <span className="absolute inset-0 bg-accent animate-pulse" />
+                            </span>
+                            No delivery fee today
+                          </span>
+                        )}
+                      </div>
 
-                <ul className="divide-y divide-line">
-                  {cartItems.map((item) => (
-                    <li key={item.id} className="flex gap-4 p-4">
-                      <Link
-                        href={`/ProductPreview?id=${item.id}`}
-                        className="relative h-24 w-20 shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-28 sm:w-24"
-                      >
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          sizes="96px"
-                          className="object-cover"
-                        />
-                      </Link>
-
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                              {item.category}
-                            </p>
+                      <ul className="divide-y divide-line">
+                        {cartItems.map((item) => (
+                          <li key={item.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
                             <Link
                               href={`/ProductPreview?id=${item.id}`}
-                              className="mt-0.5 block truncate font-display text-sm text-ink hover:text-accent sm:text-[15px]"
+                              className="relative h-16 w-14 shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-20 sm:w-16"
+                              aria-label={item.title}
                             >
-                              {item.title}
+                              <Image
+                                src={item.image}
+                                alt={item.title}
+                                fill
+                                sizes="56px"
+                                className="object-cover"
+                              />
                             </Link>
-                            {item.selectedVariantDetail && (
-                              <p className="mt-0.5 truncate text-[11px] text-accent">
-                                Product variant: {item.selectedVariantDetail}
-                              </p>
-                            )}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-muted transition-colors hover:text-accent"
-                            aria-label={`Remove ${item.title}`}
-                          >
-                            <FiTrash2 size={15} />
-                          </button>
-                        </div>
 
-                        <div className="mt-auto flex items-end justify-between gap-3 pt-3">
-                          <div className="flex items-center gap-1 rounded-full border border-line bg-surface-2 p-1">
-                            <button
-                              type="button"
-                              onClick={() => setQuantity(item.id, item.qty - 1)}
-                              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
-                              aria-label="Decrease quantity"
-                            >
-                              <FiMinus size={12} />
-                            </button>
-                            <span className="w-6 text-center text-xs font-semibold tabular-nums">
-                              {item.qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setQuantity(item.id, item.qty + 1)}
-                              className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
-                              aria-label="Increase quantity"
-                            >
-                              <FiPlus size={12} />
-                            </button>
-                          </div>
+                            <div className="min-w-0 flex flex-1 flex-col sm:gap-4">
+                              <div className="flex gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+                                    {item.category}
+                                  </p>
+                                  <Link
+                                    href={`/ProductPreview?id=${item.id}`}
+                                    className="mt-0.5 block truncate font-display text-sm text-ink hover:text-accent"
+                                  >
+                                    {item.title}
+                                  </Link>
+                                  {item.selectedVariantDetail && (
+                                    <p className="mt-0.5 truncate text-[11px] text-accent">
+                                      {item.selectedVariantDetail}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="min-w-0 shrink-0 mt-auto sm:inline-flex sm:mt-0 sm:gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFromCart(item.id)}
+                                    className="text-muted transition-colors hover:text-accent"
+                                    aria-label={`Remove ${item.title}`}
+                                  >
+                                    <FiTrash2 size={15} />
+                                  </button>
+                                  <div className="text-right sm:ml-auto">
+                                    <p className="text-sm font-semibold text-ink">
+                                      {formatNaira(item.price * item.qty)}
+                                    </p>
+                                    {item.oldprice && (
+                                      <p className="text-[11px] text-muted line-through">
+                                        {formatNaira(item.oldprice * item.qty)}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
 
-                          <div className="text-right">
-                            <p className="text-sm font-semibold text-ink">
-                              {formatNaira(item.price * item.qty)}
-                            </p>
-                            {item.oldprice && (
-                              <p className="text-[11px] text-muted line-through">
-                                {formatNaira(item.oldprice * item.qty)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                              <div className="mt-1 flex items-center gap-1.5 border border-line rounded-full bg-surface-2 p-1 self-start sm:self-auto sm:ml-auto sm:justify-self-end">
+                                <button
+                                  type="button"
+                                  onClick={() => setQuantity(item.id, item.qty - 1)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <FiMinus size={12} />
+                                </button>
+                                <span className="w-5 text-center text-xs font-semibold tabular-nums">
+                                  {item.qty}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setQuantity(item.id, item.qty + 1)}
+                                  className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
+                                  aria-label="Increase quantity"
+                                >
+                                  <FiPlus size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="flex w-full shrink-0 sm:sticky sm:top-24">
+                    <aside className="card mb-0 sm:hidden sm:w-[340px] sm:fixed sm:inset-0 sm:mt-16 sm:max-h-[calc(100vh-4.5rem)] sm:overflow-y-auto sm:self-start sm:rounded-3xl sm:border sm:border-line sm:bg-surface sm:shadow-soft sm:p-5 lg:max-w-[360px] lg:rounded-3xl lg:shadow-soft lg:p-5">
+                      <div className="flex items-center justify-between border-b border-line border-b-surface-2 pb-3">
+                        <h2 className="font-display text-base text-ink">Order summary</h2>
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-soft">
+                          {cartCount} {cartCount === 1 ? "item" : "items"}
+                        </span>
                       </div>
-                    </li>
-                  ))}
-                </ul>
+
+                      <dl className="mt-4 flex flex-col gap-x-3 gap-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <dt className="text-ink-soft">Subtotal</dt>
+                          <dd className="font-medium text-ink">{formatNaira(subtotal)}</dd>
+                        </div>
+                        {savings > 0 && (
+                          <div className="flex justify-between">
+                            <dt className="text-ink-soft">You save</dt>
+                            <dd className="font-medium text-accent">−{formatNaira(savings)}</dd>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <dt className="text-ink-soft">Delivery</dt>
+                          <dd className="font-medium text-ink">
+                            {delivery === 0 ? "Free" : formatNaira(delivery)}
+                          </dd>
+                        </div>
+                        <div className="divider my-1" />
+                        <div className="flex items-baseline justify-between pt-1">
+                          <dt className="font-display text-base text-ink">Total</dt>
+                          <dd className="font-display text-xl text-ink">{formatNaira(total)}</dd>
+                        </div>
+                      </dl>
+
+                      <Link href="/Checkout" className="btn-primary mt-5 w-full">
+                        Go to checkout
+                        <FiArrowRight size={15} />
+                      </Link>
+
+                      <div className="mt-4 flex flex-col gap-1.5 text-[11px] text-muted">
+                        <span>Bank transfer · receipt verified before dispatch</span>
+                        <span>Nationwide delivery in 1–5 working days</span>
+                      </div>
+                    </aside>
+                  </div>
+                </div>
               </div>
 
               <Link href="/shop" className="btn-ghost self-start px-0 text-xs">
                 <FiArrowRight size={13} className="rotate-180" /> Continue shopping
               </Link>
             </div>
-
-            <aside className="card sticky top-24 p-5">
-              <h2 className="font-display text-lg text-ink">Order summary</h2>
-              <dl className="mt-4 flex flex-col gap-2.5 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">Subtotal</dt>
-                  <dd className="font-medium text-ink">{formatNaira(subtotal)}</dd>
-                </div>
-                {savings > 0 && (
-                  <div className="flex justify-between">
-                    <dt className="text-ink-soft">You save</dt>
-                    <dd className="font-medium text-accent">−{formatNaira(savings)}</dd>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <dt className="text-ink-soft">Delivery</dt>
-                  <dd className="font-medium text-ink">
-                    {delivery === 0 ? "Free" : formatNaira(delivery)}
-                  </dd>
-                </div>
-                <div className="divider my-1" />
-                <div className="flex items-baseline justify-between">
-                  <dt className="font-display text-base text-ink">Total</dt>
-                  <dd className="font-display text-2xl text-ink">{formatNaira(total)}</dd>
-                </div>
-              </dl>
-
-              <Link href="/Checkout" className="btn-primary mt-5 w-full">
-                Go to checkout
-                <FiArrowRight size={15} />
-              </Link>
-
-              <div className="mt-4 flex flex-col gap-1.5 text-[11px] text-muted">
-                <span>Bank transfer · receipt verified before dispatch</span>
-                <span>Nationwide delivery in 1–5 working days</span>
-              </div>
-            </aside>
           </div>
         )}
       </div>
