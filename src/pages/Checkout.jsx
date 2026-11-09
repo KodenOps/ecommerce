@@ -744,7 +744,7 @@ export default function Checkout() {
               {cartItems.map((item) => (
                 <li key={item.id} className="flex justify-between gap-3">
                   <span className="min-w-0 truncate text-ink-soft">
-                    {item.title} <span className="text-muted">×{item.qty}</span>
+                    {item.title}{item.selectedVariantDetail ? ` · ${item.selectedVariantDetail}` : ""} <span className="text-muted">×{item.qty}</span>
                   </span>
                   <span className="shrink-0 font-medium text-ink">
                     {formatNaira(item.price * item.qty)}
