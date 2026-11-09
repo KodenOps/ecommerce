@@ -77,7 +77,7 @@ export default async function handler(req, res) {
     console.error("[broadcast] push fan-out failed:", err?.message);
     pushMeta.push({
       endpoint: null,
-      pushError: String(err?.message || err ?? ""),
+      pushError: String(err?.message || String(err) || ""),
       pushCode: null,
     });
   }

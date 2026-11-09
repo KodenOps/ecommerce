@@ -83,7 +83,7 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error("[broadcast] push fan-out failed:", err?.message);
-    pushMeta.push({ endpoint: null, pushError: String(err?.message || err ?? ""), pushCode: null });
+    pushMeta.push({ endpoint: null, pushError: String(err?.message || String(err) || ""), pushCode: null });
   }
 
   return sendJson(res, 201, { sent: customers.length, fanoutErrors, pushOptIn: customers.length, pushMeta: pushMeta.slice(0, 50) });
