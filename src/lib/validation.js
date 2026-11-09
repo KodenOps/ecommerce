@@ -38,6 +38,11 @@ export function isNigerianPhone(value) {
   return Boolean(normalizePhone(value));
 }
 
+export function cleanEmail(value, max = 160) {
+  const email = String(value ?? "").trim().toLowerCase().slice(0, max);
+  return isEmail(email) ? email : "";
+}
+
 export function formatPhone(value) {
   const normalized = normalizePhone(value);
   if (!normalized) return String(value ?? "");
