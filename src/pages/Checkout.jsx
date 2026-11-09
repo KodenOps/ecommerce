@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   FiAlertCircle,
@@ -367,16 +367,17 @@ export default function Checkout() {
           }
         />
 
-        <div className="flex items-center gap-2">
+        <ol className="grid grid-cols-3 items-center gap-1.5 sm:flex sm:gap-2">
           {STEPS.map((item, index) => {
             const active = step === item.id;
             const done = step > item.id;
             return (
-              <React.Fragment key={item.id}>
+              <li key={item.id} className="flex min-w-0 items-center gap-2 sm:flex-1">
                 <button
                   type="button"
                   onClick={() => (done || item.id === step ? setStep(item.id) : null)}
-                  className={`flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition-all ${
+                  aria-current={active ? "step" : undefined}
+                  className={`flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-2 py-2 text-[11px] font-semibold transition-all sm:flex-none sm:justify-start sm:gap-2 sm:px-4 sm:text-xs ${
                     active
                       ? "border-accent bg-accent text-accent-ink shadow-glow"
                       : done
@@ -384,19 +385,21 @@ export default function Checkout() {
                       : "border-line bg-surface/60 text-muted"
                   }`}
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-current/10 text-[10px]">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-current/10 text-[10px]">
                     {done ? <FiCheck size={11} /> : item.id}
                   </span>
-                  {item.label}
+                  <span className="truncate">{item.label}</span>
                 </button>
-                {index < STEPS.length - 1 && <span className="h-px flex-1 bg-line" />}
-              </React.Fragment>
+                {index < STEPS.length - 1 && (
+                  <span className="hidden h-px flex-1 bg-line sm:block" />
+                )}
+              </li>
             );
           })}
-        </div>
+        </ol>
 
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
-          <div className="card p-5 sm:p-6">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-start">
+          <div className="card min-w-0 p-5 sm:p-6">
             {step === 1 && (
               <div className="flex flex-col gap-4">
                 <div>
@@ -495,7 +498,7 @@ export default function Checkout() {
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!deliveryComplete}
-                  className="btn-primary mt-1 self-start"
+                  className="btn-primary mt-1 w-full justify-center self-start sm:w-auto"
                 >
                   Continue to payment
                   <FiArrowRight size={15} />
@@ -523,7 +526,7 @@ export default function Checkout() {
                   <p className="mt-1.5 text-sm font-semibold text-ink">{STORE.bank.bankName}</p>
                   <p className="text-xs text-ink-soft">{STORE.bank.accountName}</p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xl font-bold tracking-[0.18em] text-ink">
+                    <span className="font-mono text-lg font-bold tracking-[0.12em] text-ink break-all sm:text-xl sm:tracking-[0.18em]">
                       {STORE.bank.accountNumber}
                     </span>
                     <button
@@ -642,12 +645,21 @@ export default function Checkout() {
                   Your receipt is stored privately in Supabase and only admins can open it.
                 </div>
 
-                <div className="mt-1 flex flex-wrap gap-2">
-                  <button type="button" onClick={() => setStep(3)} disabled={!receipt} className="btn-primary">
+                <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    disabled={!receipt}
+                    className="btn-primary w-full justify-center sm:w-auto"
+                  >
                     Review order
                     <FiArrowRight size={15} />
                   </button>
-                  <button type="button" onClick={() => setStep(1)} className="btn-secondary">
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="btn-secondary w-full justify-center sm:w-auto"
+                  >
                     Back
                   </button>
                 </div>
@@ -720,13 +732,20 @@ export default function Checkout() {
                   <p className="flex items-center gap-1.5 rounded-2xl border border-accent/40 bg-accent-soft/60 px-4 py-3 text-xs font-medium text-accent">
                     <FiAlertCircle size={13} /> {submitError}
                   </p>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" onClick={handleCompleteOrder} disabled={!receipt || submitting} className="btn-primary">
+                )}                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleCompleteOrder}
+                    disabled={!receipt || submitting}
+                    className="btn-primary w-full justify-center sm:w-auto"
+                  >
                     {submitting ? "Submitting…" : `Complete order · ${formatNaira(payable)}`}
                   </button>
-                  <button type="button" onClick={() => setStep(2)} className="btn-secondary">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="btn-secondary w-full justify-center sm:w-auto"
+                  >
                     Back
                   </button>
                 </div>
@@ -738,7 +757,7 @@ export default function Checkout() {
             )}
           </div>
 
-          <aside className="card sticky top-24 p-5">
+          <aside className="card min-w-0 p-5 lg:sticky lg:top-24">
             <h2 className="font-display text-lg text-ink">Your bag</h2>
             <ul className="mt-3 flex flex-col gap-2 text-sm">
               {cartItems.map((item) => (

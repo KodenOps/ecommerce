@@ -145,6 +145,7 @@ create table if not exists public.order_items (
   product_id     uuid references public.products (id) on delete set null,
   variant_value  text,
   variant_label  text,
+  variant_meta   jsonb not null default '[]'::jsonb,
   title          text not null,
   sku            text not null,
   unit_price     integer not null,
@@ -197,6 +198,13 @@ alter table public.products add column if not exists images text[] not null defa
 
 -- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
 alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
+
+-- The picked option on each order line. These live in the create table above,
+-- but a database created before variants existed keeps the old shape unless the
+-- columns are added explicitly - without this, place_order cannot save an order.
+alter table public.order_items add column if not exists variant_value text;
+alter table public.order_items add column if not exists variant_label text;
+alter table public.order_items add column if not exists variant_meta jsonb not null default '[]'::jsonb;
 
 do $$
 begin
@@ -579,8 +587,10 @@ declare
   v_uid uuid := auth.uid();
   v_profile public.profiles;
   v_product public.products;
+  v_variant public.product_variants;
   v_order public.orders;
   v_item jsonb;
+  v_unit integer;
   v_lines jsonb := '[]'::jsonb;
   v_qty integer;
   v_subtotal integer := 0;
@@ -617,6 +627,7 @@ begin
 
   for v_item in select * from jsonb_array_elements(p_items) loop
     v_qty := greatest(1, least(20, coalesce((v_item ->> 'qty')::integer, 1)));
+    v_variant := null;
 
     select * into v_product from public.products
     where id = (v_item ->> 'product_id')::uuid
@@ -632,18 +643,39 @@ begin
       raise exception 'OUT_OF_STOCK: only % left of %', v_product.stock, v_product.title;
     end if;
 
-    update public.products set stock = stock - v_qty where id = v_product.id;
+    -- The picked option decides the price and its own stock, so an order always
+    -- keeps the variant the customer chose (colour, flavour, pack size...).
+    if coalesce(v_item ->> 'variant_value', '') <> '' then
+      select * into v_variant from public.product_variants
+      where product_id = v_product.id and value = (v_item ->> 'variant_value')
+      limit 1
+      for update;
+
+      if found and v_variant.stock < v_qty then
+        raise exception 'OUT_OF_STOCK: only % left of % (%)', v_variant.stock, v_product.title, v_variant.label;
+      end if;
+    end if;
+
+    v_unit := coalesce(nullif(v_variant.price, 0), v_product.price);
+
+    update public.products set stock = greatest(0, stock - v_qty) where id = v_product.id;
+    if v_variant.id is not null then
+      update public.product_variants set stock = greatest(0, stock - v_qty) where id = v_variant.id;
+    end if;
 
     v_lines := v_lines || jsonb_build_object(
       'product_id', v_product.id,
       'title', v_product.title,
       'sku', v_product.sku,
-      'unit_price', v_product.price,
+      'unit_price', v_unit,
       'qty', v_qty,
-      'line_total', v_product.price * v_qty,
-      'image', v_product.image
+      'line_total', v_unit * v_qty,
+      'image', v_product.image,
+      'variant_value', coalesce(v_variant.value, nullif(v_item ->> 'variant_value', '')),
+      'variant_label', coalesce(v_variant.label, nullif(v_item ->> 'variant_label', '')),
+      'variant_meta', coalesce(v_variant.meta, '[]'::jsonb)
     );
-    v_subtotal := v_subtotal + v_product.price * v_qty;
+    v_subtotal := v_subtotal + (v_unit * v_qty);
   end loop;
 
   if p_promo is not null and length(trim(p_promo)) > 0 then
@@ -698,13 +730,14 @@ begin
     now()
   ) returning * into v_order;
 
-  insert into public.order_items (order_id, product_id, variant_value, variant_label, title, sku, unit_price, qty, line_total, image)
+  insert into public.order_items (order_id, product_id, variant_value, variant_label, variant_meta, title, sku, unit_price, qty, line_total, image)
   select
     v_order.id,
     (line ->> 'product_id')::uuid,
     nullif(line ->> 'variant_value', ''),
     nullif(line ->> 'variant_label', ''),
-    coalesce(nullif(line ->> 'variant_label', ''), line ->> 'title'),
+    coalesce(line -> 'variant_meta', '[]'::jsonb),
+    line ->> 'title',
     line ->> 'sku',
     (line ->> 'unit_price')::integer,
     (line ->> 'qty')::integer,

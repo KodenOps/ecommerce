@@ -44,6 +44,14 @@ export default async function handler(req, res) {
       qty: Math.min(20, Math.max(1, readInt(item?.qty, 1))),
       variant_value: cleanText(item?.variantValue, 60) || null,
       variant_label: cleanText(item?.variantLabel, 80) || null,
+      variant_meta: (Array.isArray(item?.variantMeta) ? item.variantMeta : [])
+        .filter(
+          (meta) =>
+            meta && typeof meta === "object" &&
+            cleanText(meta.key, 40) && cleanText(meta.value, 80)
+        )
+        .slice(0, 10)
+        .map((meta) => ({ key: cleanText(meta.key, 40), value: cleanText(meta.value, 80) })),
       title: cleanText(item?.title, 120) || null,
       sku: cleanText(item?.sku, 60) || null,
       unit_price: readInt(item?.price, 0),
@@ -91,6 +99,7 @@ export default async function handler(req, res) {
       qty: item.qty,
       variant_value: item.variant_value,
       variant_label: item.variant_label,
+      variant_meta: item.variant_meta,
       title: item.title,
       sku: item.sku,
       unit_price: item.unit_price,
@@ -111,15 +120,11 @@ export default async function handler(req, res) {
     return dbError(res, error, "We could not save your order. Please try again.");
   }
 
-  const enrichedItems = data.items.map((item) => ({
-    ...item,
-    product: data.products?.[String(item.product_id)] || null,
-    meta: data.variant_meta?.[String(item.product_id)] || null,
-  }));
-
-  const order = toOrder({ ...data.order, order_items: enrichedItems, order_events: [] });
-
-
+  const order = toOrder({
+    ...data.order,
+    order_items: Array.isArray(data.items) ? data.items : [],
+    order_events: [],
+  });
 
   try {
     await sendOrderPlacedEmail({

@@ -176,6 +176,18 @@ export function StoreProvider({ children }) {
       const variantKey = variant?.value ? String(variant.value) : "default";
       const unitPrice = Number(variant?.price ?? product.price ?? 0);
       const availableStock = Number(variant?.stock ?? product.stock ?? 0);
+      const meta = Array.isArray(variant?.meta)
+        ? variant.meta
+            .filter(
+              (entry) =>
+                entry && typeof entry === "object" &&
+                String(entry.key ?? "").trim() && String(entry.value ?? "").trim()
+            )
+            .map((entry) => ({ key: String(entry.key).trim(), value: String(entry.value).trim() }))
+        : [];
+      const pickedVariant = variant
+        ? { value: variant.value, label: variant.label, meta }
+        : null;
 
       if (availableStock <= 0) {
         notify(`${product.title} is sold out.`);
@@ -193,7 +205,7 @@ export function StoreProvider({ children }) {
             return current;
           }
           return current.map((line) =>
-            line.key === key ? { ...line, qty: nextQty, price: unitPrice, variant: variant ? { value: variant.value, label: variant.label } : null } : line
+            line.key === key ? { ...line, qty: nextQty, price: unitPrice, variant: pickedVariant } : line
           );
         }
 
@@ -205,7 +217,7 @@ export function StoreProvider({ children }) {
             qty: nextQty,
             price: unitPrice,
             oldprice: product.oldprice ?? null,
-            variant: variant ? { value: variant.value, label: variant.label } : null,
+            variant: pickedVariant,
           },
         ];
       });
@@ -298,11 +310,17 @@ export function StoreProvider({ children }) {
               line.variant?.label ?? variantByValue?.label ?? null;
             const variantValue =
               line.variant?.value ?? variantByValue?.value ?? null;
+            const variantMeta = Array.isArray(line.variant?.meta)
+              ? line.variant.meta
+              : Array.isArray(variantByValue?.meta)
+                ? variantByValue.meta
+                : [];
             return {
               productId: line.id,
               qty: line.qty,
               variantValue: variantValue ?? null,
               variantLabel: variantLabel ?? null,
+              variantMeta,
               title: product?.title || "",
               sku: product?.sku || "",
               price: line.price,

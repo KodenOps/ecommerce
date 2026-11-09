@@ -154,24 +154,19 @@ export function toOrderItem(row) {
     qty: row.qty,
     lineTotal: row.line_total,
     image: row.image,
+    variantAttributes: variantAttributesFor(row),
     variantDetail: variantDetailFor(row),
   };
 }
 
-function variantDetailFor(row) {
-  const product = row.product || row.product_name || null;
-  const productTitle =
-    product && typeof product === "object"
-      ? (product.title || product.name || "")
-      : product || (row.title || "");
-  const label = row.variant_label || row.variantLabel || null;
-  const value = row.variant_value || row.variantValue || null;
+/** "Colour = Rose, Amount = 4000" for the option on an order line. */
+function variantAttributesFor(row) {
   const meta = Array.isArray(row.variant_meta)
     ? row.variant_meta
     : Array.isArray(row.meta)
       ? row.meta
       : [];
-  const attributes = (meta || [])
+  return (meta || [])
     .filter(
       (item) =>
         typeof item === "object" &&
@@ -180,8 +175,18 @@ function variantDetailFor(row) {
     )
     .map((item) => `${String(item.key).trim()} = ${String(item.value).trim()}`)
     .join(", ");
+}
+
+function variantDetailFor(row) {
+  const product = row.product || row.product_name || null;
+  const productTitle =
+    product && typeof product === "object"
+      ? (product.title || product.name || row.title || "")
+      : product || (row.title || "");
+  const label = row.variant_label || row.variantLabel || null;
+  const attributes = variantAttributesFor(row);
   const parts = [productTitle];
-  if (label) parts.push(label);
+  if (label && label !== productTitle) parts.push(label);
   if (attributes) parts.push(attributes);
   return parts.join(": ");
 }

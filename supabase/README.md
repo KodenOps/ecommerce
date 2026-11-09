@@ -30,6 +30,11 @@ Supabase Dashboard → **SQL Editor** → paste and run, in order:
    `admin_finances`).
 2. [`seed.sql`](./seed.sql) — the 12-product launch catalogue and two promos.
 
+`schema.sql` is safe to run again: it adds any column a newer version of the
+app needs (for example the variant columns on `order_items`) and replaces the
+SQL functions. Run it whenever you pull an update that touches the backend —
+skipping it leaves the database on an older shape and orders cannot be saved.
+
 Or from a machine with `psql`:
 
 ```bash

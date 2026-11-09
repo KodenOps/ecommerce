@@ -23,7 +23,11 @@ const Favorites = () => {
             favoriteItems.length > 0 && (
               <button
                 type="button"
-                onClick={() => favoriteItems.forEach((item) => addToCart(item.id))}
+                onClick={() =>
+                  favoriteItems.forEach((item) =>
+                    addToCart(item.id, 1, item.sizes?.[0] ?? null)
+                  )
+                }
                 className="btn-primary"
               >
                 Add all to bag

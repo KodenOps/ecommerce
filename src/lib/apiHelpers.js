@@ -81,6 +81,18 @@ export function dbError(res, error, fallback = "Something went wrong. Please try
   if (/JWT|token/i.test(raw) && /expired|invalid/i.test(raw)) {
     return sendJson(res, 401, { error: "Your session expired. Please sign in again." });
   }
+  // A missing column or SQL function means the database is behind the code.
+  // "Please try again" would never work, so say the shop is unavailable.
+  if (code === "42703" || code === "42883" || code === "PGRST202") {
+    console.error(
+      "[api] the database is missing a column or function — re-run supabase/schema.sql",
+      error
+    );
+    return sendJson(res, 503, {
+      error:
+        "The shop is briefly unavailable — please try that again in a few minutes, or message us on WhatsApp and we will take your order.",
+    });
+  }
 
   console.error("[api]", error);
   return sendJson(res, 500, { error: fallback });

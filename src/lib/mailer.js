@@ -3,6 +3,12 @@ import { downloadObject } from "@/lib/supabase/storage";
 
 const DEFAULT_ADMIN_EMAIL = "femifadiya.segun@gmail.com";
 
+/** The option the customer picked, with any extra attributes. */
+function variantLine(item) {
+  if (!item?.variantLabel) return "";
+  return `${item.variantLabel}${item.variantAttributes ? ` (${item.variantAttributes})` : ""}`;
+}
+
 function escapeHtml(value) {
   if (typeof value !== "string") return "";
   return value
@@ -70,7 +76,7 @@ export async function sendOrderPlacedEmail({
   const itemsLines = (order.items || [])
     .map(
       (item) =>
-        `        <li><strong>${escapeHtml(item.title || "Product")}</strong>${item.variantDetail ? ` — ${escapeHtml(item.variantDetail)}` : ""}
+        `        <li><strong>${escapeHtml(item.title || "Product")}</strong>${variantLine(item) ? ` — ${escapeHtml(variantLine(item))}` : ""}
           <br />Qty ${item.qty} × ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? `<br /><span style="color:#6b7280;font-size:0.9em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
         </li>`
     )
@@ -87,7 +93,7 @@ export async function sendOrderPlacedEmail({
     `Coupon used: ${promoCode}`,
     "Items:",
     ...(order.items || []).flatMap((item) => [
-      `  - ${item.title}${item.variantDetail ? ` (${item.variantDetail})` : ""} × ${item.qty} @ ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? ` [SKU ${item.sku}]` : ""}`,
+      `  - ${item.title}${variantLine(item) ? ` (${variantLine(item)})` : ""} × ${item.qty} @ ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? ` [SKU ${item.sku}]` : ""}`,
     ]),
     `Total: ${formattedTotal}`,
     `Order URL: ${orderUrl}`,
@@ -119,7 +125,7 @@ export async function sendOrderPlacedEmail({
               (item) => `
             <tr style="border-bottom:1px solid #e5e7eb;">
               <td style="padding:8px;border:1px solid #e5e7eb;">
-                <strong>${escapeHtml(item.title || "Product")}</strong>${item.variantDetail ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(item.variantDetail)}</span>` : ""}
+                <strong>${escapeHtml(item.title || "Product")}</strong>${variantLine(item) ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(variantLine(item))}</span>` : ""}
                 ${item.sku ? `<br/><span style="color:#9ca3af;font-size:0.85em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
               </td>
               <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${item.qty}</td>
