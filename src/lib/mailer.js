@@ -125,8 +125,7 @@ export async function sendOrderPlacedEmail({
               (item) => `
             <tr style="border-bottom:1px solid #e5e7eb;">
               <td style="padding:8px;border:1px solid #e5e7eb;">
-                <strong>${escapeHtml(item.title || "Product")}</strong>${variantLine(item) ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(variantLine(item))}</span>` : ""}
-                ${item.sku ? `<br/><span style="color:#9ca3af;font-size:0.85em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
+                ${escapeHtml(lineLabelFor(item))}
               </td>
               <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${item.qty}</td>
               <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${formatNaira(item.lineTotal)}</td>
@@ -152,4 +151,21 @@ export async function sendOrderPlacedEmail({
   });
 
   return { sent: true };
+}
+
+/** One descriptive line for an order item, used in the email body.
+ * Uses the raw labels the order row stores, and falls back to the
+ * embedded product title when the item title is missing or generic. */
+function lineLabelFor(item) {
+  if (!item) return "Product";
+
+  const title = item.title || "Product";
+  const label = item.variantLabel || item.variant_label || null;
+  const attributes = item.variantAttributes || item.variantAttributesFor ? item.variantAttributes : "";
+
+  const parts = [title];
+  if (label && label !== title) parts.push(label);
+  if (attributes) parts.push(attributes);
+
+  return parts.join(" · ");
 }
