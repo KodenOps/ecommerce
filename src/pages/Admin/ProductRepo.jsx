@@ -6,7 +6,6 @@ import {
   FiAlertCircle,
   FiCheckCircle,
   FiImage,
-  FiPlus,
   FiRefreshCw,
   FiSave,
   FiUpload,
@@ -14,6 +13,7 @@ import {
 } from "react-icons/fi";
 import productRepo from "@/data/product_repo";
 import AdminShell from "@/components/AdminShell";
+import VariantEditor from "@/components/VariantEditor";
 import { adminPageProps } from "@/lib/routeGuards";
 import { formatNaira } from "@/lib/money";
 
@@ -52,6 +52,7 @@ const normalizeRepoProduct = (item) => {
     // Repo items are ready to sell by default. The toggle lets an admin keep
     // an item as a draft without deleting it from the bank.
     listed: item?.listed !== false,
+    variantTitle: item?.variantTitle || item?.variant_title || "Options",
     sizes: sizes.map((size, index) => ({
       value: String(size?.value || size?.label || `size-${index + 1}`),
       label: String(size?.label || size?.value || `Size ${index + 1}`),
@@ -89,6 +90,7 @@ const toRepoPayload = (item) => ({
   description: item.description || "",
   image: item.image || "",
   images: Array.isArray(item.images) ? item.images.slice(0, 3) : [],
+  variantTitle: item.variantTitle || "Options",
   sizes: Array.isArray(item.sizes) ? item.sizes : [],
 });
 
@@ -159,6 +161,7 @@ export default function AdminProductRepo() {
         image: live.image || base.image,
         images: liveImages.length ? liveImages : base.images,
         description: live.description || base.description,
+        variantTitle: live.variant_title || base.variantTitle,
         sizes: Array.isArray(live.sizes) && live.sizes.length ? live.sizes : base.sizes,
         listed: live.status === "ACTIVE",
         liveProductId: live.id,
@@ -249,29 +252,28 @@ export default function AdminProductRepo() {
   };
 
   const openRepoEditor = (item) => {
-    setRepoEditor({ ...item, sizes: Array.isArray(item?.sizes) ? item.sizes.map((size) => ({ ...size })) : [] });
+    // Repo rows and live catalogue rows spell the default flag differently, so
+    // normalise both into the shape the editor works with.
+    const sizes = (Array.isArray(item?.sizes) ? item.sizes : []).map((size, index) => ({
+      ...size,
+      value: String(size?.value || size?.label || `option-${index + 1}`),
+      label: String(size?.label || size?.value || `Option ${index + 1}`),
+      price: Number(size?.price || 0),
+      stock: Number(size?.stock || 0),
+      is_default: Boolean(size?.is_default ?? size?.isDefault ?? index === 0),
+    }));
+
+    setRepoEditor({
+      ...item,
+      variantTitle: item?.variantTitle || "Options",
+      sizes,
+    });
   };
 
   const closeRepoEditor = () => setRepoEditor(null);
 
   const updateRepoEditor = (field, value) => {
     setRepoEditor((current) => (current ? { ...current, [field]: value } : current));
-  };
-
-  const updateRepoSize = (index, field, value) => {
-    setRepoEditor((current) => {
-      if (!current) return current;
-      const sizes = [...(current.sizes || [])];
-      sizes[index] = { ...sizes[index], [field]: field === "price" ? Number(value || 0) : value };
-      return { ...current, sizes };
-    });
-  };
-
-  const addRepoSize = () => {
-    setRepoEditor((current) => ({
-      ...current,
-      sizes: [...(current?.sizes || []), { value: `size-${Date.now()}`, label: "New size", price: 0, stock: 25 }],
-    }));
   };
 
   const handleRepoImageUpload = async (event) => {
@@ -544,161 +546,12 @@ export default function AdminProductRepo() {
                     <textarea rows={3} value={repoEditor.description || ""} onChange={(event) => updateRepoEditor("description", event.target.value)} className="field mt-1.5" />
                   </div>
 
-                  <div>
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="label">Options</label>
-                      <button type="button" onClick={addRepoSize} className="btn-secondary text-[10px] px-2 py-1">
-                        <FiPlus size={10} /> Add option
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {(repoEditor.sizes || []).map((size, index) => (
-                        <div key={`${repoEditor.id}-${size.value || index}`} className="rounded-xl border border-line bg-surface p-2">
-                          <div className="mb-2 flex items-center gap-2">
-                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
-                              Option {index + 1}
-                            </span>
-                            {size.is_default ? (
-                              <span className="text-[10px] font-medium text-accent">Default</span>
-                            ) : null}
-                          </div>
-
-                          <div className="grid grid-cols-[1fr_1fr_120px] gap-2 rounded-xl border border-line bg-surface-2 p-2">
-                            <input
-                              value={size.label || ""}
-                              onChange={(event) => updateRepoSize(index, "label", event.target.value)}
-                              className="field"
-                              placeholder="Label"
-                            />
-                            <input
-                              value={size.value || ""}
-                              onChange={(event) => updateRepoSize(index, "value", event.target.value)}
-                              className="field"
-                              placeholder="Value"
-                            />
-                            <input
-                              type="number"
-                              value={size.price || 0}
-                              onChange={(event) => updateRepoSize(index, "price", event.target.value)}
-                              className="field"
-                              placeholder="₦"
-                            />
-                          </div>
-
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={Boolean(size.is_default)}
-                                onChange={(event) =>
-                                  updateRepoSize(index, "is_default", event.target.checked)
-                                }
-                                className="h-4 w-4 rounded border-line accent-accent"
-                                aria-label="Set as default option"
-                              />
-                              <label className="text-xs text-ink-soft">
-                                Use as the default option
-                              </label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                value={size.stock || 0}
-                                onChange={(event) =>
-                                  updateRepoSize(index, "stock", Number(event.target.value || 0))
-                                }
-                                className="field"
-                                placeholder="Stock"
-                              />
-                              <label className="text-xs text-ink-soft">Stock</label>
-                            </div>
-                          </div>
-
-                          <div className="mt-2">
-                            <div className="mb-1 flex items-center justify-between">
-                              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
-                                Extra attributes
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  updateRepoSize(index, "meta", [
-                                    ...(Array.isArray(size.meta) ? size.meta : []),
-                                    { key: "", value: "" },
-                                  ])
-                                }
-                                className="text-[10px] text-accent hover:text-accent-ink"
-                              >
-                                + Add attribute
-                              </button>
-                            </div>
-
-                            <div className="space-y-1">
-                              {(Array.isArray(size.meta) ? size.meta : []).map((meta, metaIndex) => (
-                                <div
-                                  key={`${index}-${metaIndex}`}
-                                  className="flex items-center gap-2"
-                                >
-                                  <input
-                                    value={meta.key || ""}
-                                    onChange={(event) => {
-                                      const next = [...(Array.isArray(size.meta) ? size.meta : [])];
-                                      next[metaIndex] = {
-                                        ...next[metaIndex],
-                                        key: event.target.value,
-                                      };
-                                      updateRepoSize(index, "meta", next);
-                                    }}
-                                    className="field w-1/2"
-                                    placeholder="Key"
-                                  />
-                                  <input
-                                    value={meta.value || ""}
-                                    onChange={(event) => {
-                                      const next = [...(Array.isArray(size.meta) ? size.meta : [])];
-                                      next[metaIndex] = {
-                                        ...next[metaIndex],
-                                        value: event.target.value,
-                                      };
-                                      updateRepoSize(index, "meta", next);
-                                    }}
-                                    className="field w-1/2"
-                                    placeholder="Value"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const next = (Array.isArray(size.meta) ? size.meta : []).filter(
-                                        (_, m) => m !== meta
-                                      );
-                                      updateRepoSize(index, "meta", next);
-                                    }}
-                                    className="text-[10px] text-muted hover:text-accent"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="mt-2 flex justify-end">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const next = (repoEditor.sizes || []).filter((_, s) => s !== size);
-                                updateRepoEditor("sizes", next);
-                              }}
-                              className="text-[10px] text-muted hover:text-accent"
-                            >
-                              Remove option
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <VariantEditor
+                    title={repoEditor.variantTitle || "Options"}
+                    options={repoEditor.sizes || []}
+                    onTitleChange={(value) => updateRepoEditor("variantTitle", value)}
+                    onChange={(sizes) => updateRepoEditor("sizes", sizes)}
+                  />
 
                   <div className="border-t border-line pt-3 md:hidden">
                     <button

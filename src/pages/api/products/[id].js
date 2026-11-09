@@ -9,6 +9,12 @@ import {
 import { createServerSupabase } from "@/lib/supabase/server";
 import { toAdminProduct, toStoreProduct } from "@/lib/productMapper";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
+import {
+  isMissingColumn,
+  normalizeVariantOptions,
+  syncProductVariants,
+  variantTitleFor,
+} from "@/lib/variants";
 
 const STATUSES = ["ACTIVE", "DRAFT", "ARCHIVED"];
 
@@ -86,21 +92,78 @@ export default async function handler(req, res) {
     }
   }
   if (body.sku !== undefined) updates.sku = cleanText(body.sku, 40);
+  if (body.variantTitle !== undefined || body.variant_title !== undefined) {
+    updates.variant_title = variantTitleFor(body.variantTitle ?? body.variant_title);
+  }
 
-  if (!Object.keys(updates).length) return sendJson(res, 400, { error: "Nothing to update." });
+  const rawVariants = Array.isArray(body.variants)
+    ? body.variants
+    : Array.isArray(body.sizes)
+      ? body.sizes
+      : null;
+
+  if (!Object.keys(updates).length && !rawVariants) {
+    return sendJson(res, 400, { error: "Nothing to update." });
+  }
 
   if (updates.title) {
     updates.slug = `${slugify(updates.title) || "product"}-${Math.random().toString(36).slice(2, 6)}`;
   }
 
-  const { data, error } = await session.supabase
+  let product = null;
+
+  if (Object.keys(updates).length) {
+    let { data, error } = await session.supabase
+      .from("products")
+      .update(updates)
+      .eq("id", id)
+      .select("*")
+      .maybeSingle();
+
+    // Older databases have no variant_title column yet; save everything else.
+    if (isMissingColumn(error, "variant_title")) {
+      const withoutTitle = { ...updates };
+      delete withoutTitle.variant_title;
+      ({ data, error } = await session.supabase
+        .from("products")
+        .update(withoutTitle)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle());
+    }
+
+    if (error) return dbError(res, error, "We could not update that product.");
+    if (!data) return sendJson(res, 404, { error: "Product not found." });
+    product = data;
+  } else {
+    const { data, error } = await session.supabase
+      .from("products")
+      .select("id")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) return dbError(res, error, "We could not update that product.");
+    if (!data) return sendJson(res, 404, { error: "Product not found." });
+    product = data;
+  }
+
+  if (rawVariants) {
+    const options = normalizeVariantOptions(rawVariants, Number(product?.price || 0));
+    try {
+      await syncProductVariants(session.supabase, id, options, { replace: true });
+    } catch (variantError) {
+      return dbError(
+        res,
+        variantError,
+        "The product was saved, but its options could not be saved."
+      );
+    }
+  }
+
+  const { data: full } = await session.supabase
     .from("products")
-    .update(updates)
+    .select("*, product_variants(*)")
     .eq("id", id)
-    .select("*")
     .maybeSingle();
 
-  if (error) return dbError(res, error, "We could not update that product.");
-  if (!data) return sendJson(res, 404, { error: "Product not found." });
-  return sendJson(res, 200, { product: toAdminProduct(data) });
+  return sendJson(res, 200, { product: toAdminProduct(full || product) });
 }

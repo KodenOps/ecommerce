@@ -9,6 +9,12 @@ import {
 import { createServerSupabase, getSessionProfile } from "@/lib/supabase/server";
 import { toAdminProduct, toStoreProduct } from "@/lib/productMapper";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
+import {
+  isMissingColumn,
+  normalizeVariantOptions,
+  syncProductVariants,
+  variantTitleFor,
+} from "@/lib/variants";
 
 const STATUSES = ["ACTIVE", "DRAFT", "ARCHIVED"];
 
@@ -64,6 +70,12 @@ export default async function handler(req, res) {
     "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80";
 
   const suffix = Math.random().toString(36).slice(2, 6);
+  const rawVariants = Array.isArray(body.variants)
+    ? body.variants
+    : Array.isArray(body.sizes)
+      ? body.sizes
+      : [];
+  const variantOptions = normalizeVariantOptions(rawVariants, price);
   const product = {
     title,
     slug: `${slugify(title) || "product"}-${suffix}`,
@@ -78,17 +90,44 @@ export default async function handler(req, res) {
     low_stock_at: Math.max(1, readInt(body.lowStockAt, 5)),
     status,
     featured: Boolean(body.featured),
+    variant_title: variantTitleFor(body.variantTitle ?? body.variant_title),
   };
 
   if (product.old_price && product.old_price <= product.price) product.old_price = null;
 
-  const { data, error } = await session.supabase
+  const productWithoutTitle = { ...product };
+  delete productWithoutTitle.variant_title;
+  let { data, error } = await session.supabase
     .from("products")
     .insert(product)
     .select("*")
     .single();
 
+  // A database that has not run the latest schema.sql yet has no variant_title
+  // column; the product still saves and the heading falls back to "Options".
+  if (isMissingColumn(error, "variant_title")) {
+    ({ data, error } = await session.supabase
+      .from("products")
+      .insert(productWithoutTitle)
+      .select("*")
+      .single());
+  }
+
   if (error) return dbError(res, error, "We could not create that product.");
+
+  if (variantOptions.length) {
+    try {
+      await syncProductVariants(session.supabase, data.id, variantOptions, {
+        replace: true,
+      });
+    } catch (variantError) {
+      return dbError(
+        res,
+        variantError,
+        "The product was created, but its options could not be saved."
+      );
+    }
+  }
 
   if (status === "ACTIVE") {
     const { data: customers } = await session.supabase
@@ -111,5 +150,14 @@ export default async function handler(req, res) {
     }
   }
 
-  return sendJson(res, 201, { product: toAdminProduct(data) });
+  return sendJson(res, 201, { product: toAdminProduct(await reloadProduct(session.supabase, data)) });
+}
+
+async function reloadProduct(supabase, fallback) {
+  const { data } = await supabase
+    .from("products")
+    .select("*, product_variants(*)")
+    .eq("id", fallback.id)
+    .maybeSingle();
+  return data || fallback;
 }

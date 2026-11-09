@@ -68,13 +68,13 @@ export default function ProductPreview({ initialProduct, productId = "" }) {
     () =>
       product && Array.isArray(product.sizes) && product.sizes.length > 0
         ? product.sizes
-        : [{ value: "default", label: "Standard", price: product?.price ?? 0, stock: product?.stock ?? 0 }],
+        : [{ value: "default", label: "Standard", price: product?.price ?? 0, stock: product?.stock ?? 0, synthetic: true }],
     [product]
   );
   const [selectedVariantValue, setSelectedVariantValue] = useState(variantOptions[0]?.value || "default");
-  const hasVariantMeta = variantOptions.some(
-    (option) => Array.isArray(option?.meta) && option.meta.length > 0
-  );
+  // A product with no saved options still needs a price-only fallback, but it
+  // should not show a one-item picker.
+  const hasOptions = variantOptions.some((option) => !option.synthetic);
 
   useEffect(() => {
     setSelectedVariantValue(variantOptions[0]?.value || "default");
@@ -216,22 +216,13 @@ export default function ProductPreview({ initialProduct, productId = "" }) {
               </p>
             </div>
 
-            {variantOptions.length > 0 && (
+            {hasOptions && (
               <div className="card p-4">
-                <p className="label">
-                  {hasVariantMeta ? "Choose variant" : variantOptions.length === 1 ? "Choose option" : "Choose size"}
-                </p>
+                <p className="label">{product.variantTitle || "Options"}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {variantOptions.map((option) => {
                     const active =
                       String(selectedVariantValue) === String(option.value);
-                    const hasMeta =
-                      Array.isArray(option.meta) && option.meta.length > 0;
-                    const metaLines = hasMeta
-                      ? option.meta
-                          .map((meta) => `${meta.key}: ${meta.value}`)
-                          .join(" · ")
-                      : null;
                     return (
                       <button
                         key={`${product.id}-${option.value}`}
@@ -246,11 +237,6 @@ export default function ProductPreview({ initialProduct, productId = "" }) {
                         <span className="block">
                           {option.label || option.value}
                         </span>
-                        {metaLines && (
-                          <span className="block text-[10px] text-accent">
-                            {metaLines}
-                          </span>
-                        )}
                         <span className="block text-[10px] opacity-70">
                           {formatNaira(Number(option.price ?? product.price ?? 0))}
                         </span>
@@ -258,11 +244,6 @@ export default function ProductPreview({ initialProduct, productId = "" }) {
                     );
                   })}
                 </div>
-                {hasVariantMeta && (
-                  <p className="mt-2 text-[11px] text-ink-soft">
-                    Pick the variant that matches what you want — colour, flavour, pack size, and anything else
-                  </p>
-                )}
               </div>
             )}
 

@@ -66,6 +66,9 @@ create table if not exists public.products (
   low_stock_at integer not null default 5,
   status       text not null default 'ACTIVE' check (status in ('ACTIVE', 'DRAFT', 'ARCHIVED')),
   featured     boolean not null default false,
+  -- The heading above a product's options, e.g. "Colour" or "Size". The
+  -- options themselves (red: 5000, 500g: 4000) live in product_variants.
+  variant_title text not null default 'Options',
   rating_rate  numeric(3, 2) not null default 4.80,
   rating_count integer not null default 0,
   created_at   timestamptz not null default now(),
@@ -198,6 +201,10 @@ alter table public.products add column if not exists images text[] not null defa
 
 -- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
 alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
+
+-- The title of a product's option group ("Colour", "Size", "Flavour"...).
+-- Products created before this column existed keep the default heading.
+alter table public.products add column if not exists variant_title text not null default 'Options';
 
 -- The picked option on each order line. These live in the create table above,
 -- but a database created before variants existed keeps the old shape unless the

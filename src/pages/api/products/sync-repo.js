@@ -8,9 +8,13 @@ import {
 } from "@/lib/apiHelpers";
 import productRepo from "@/data/product_repo";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
+import {
+  isMissingColumn,
+  normalizeVariantOptions,
+  syncVariantGroups,
+} from "@/lib/variants";
 
 const MAX_ITEMS = 1000;
-const MAX_VARIANTS_PER_INSERT = 500;
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80";
 
@@ -54,12 +58,6 @@ function imageListFor(item, fallback) {
   return images.length ? images : [fallback];
 }
 
-function isMissingMetaColumn(error) {
-  if (!error) return false;
-  const message = `${error.message || ""} ${error.details || ""}`;
-  return /\bmeta\b/i.test(message) && (error.code === "PGRST204" || error.code === "42703");
-}
-
 function buildVariantRows(item, fallbackPrice) {
   const rawSizes = Array.isArray(item?.sizes) ? item.sizes : [];
 
@@ -71,14 +69,20 @@ function buildVariantRows(item, fallbackPrice) {
         price: toPrice(item?.selling_price ?? item?.price ?? fallbackPrice),
         stock: toStock(item?.stock ?? item?.unit, 25),
         is_default: true,
+        meta: [],
       },
     ];
   }
 
-  const defaultIndex = rawSizes.findIndex(
+  // An option the admin marked as default wins; otherwise the option that
+  // matches the product price, so the card and the picker agree.
+  const markedDefault = rawSizes.findIndex((size) =>
+    Boolean(size?.is_default ?? size?.isDefault)
+  );
+  const priceIndex = rawSizes.findIndex(
     (size) => toPrice(size?.price) === fallbackPrice
   );
-  const chosenDefault = defaultIndex >= 0 ? defaultIndex : 0;
+  const chosenDefault = markedDefault >= 0 ? markedDefault : priceIndex >= 0 ? priceIndex : 0;
 
   return rawSizes.map((size, index) => ({
     value: cleanText(size?.value || size?.label, 80) || `size-${index + 1}`,
@@ -86,6 +90,7 @@ function buildVariantRows(item, fallbackPrice) {
     price: toPrice(size?.price ?? item?.selling_price ?? item?.price),
     stock: toStock(size?.stock ?? item?.stock ?? item?.unit, 25),
     is_default: index === chosenDefault,
+    meta: Array.isArray(size?.meta) ? size.meta : [],
   }));
 }
 
@@ -137,6 +142,12 @@ export default async function handler(req, res) {
         `${slugify(title) || "product"}-${slugify(sku) || `item-${index + 1}`}`.slice(0, 90);
       const listed = typeof item?.listed === "boolean" ? item.listed : null;
       const status = listed === null ? existing?.status || "ACTIVE" : listed ? "ACTIVE" : "DRAFT";
+      // Only overwrite the heading when the repo item carries one, so a title
+      // set on the product page survives a bulk repo sync.
+      const variantTitle = cleanText(
+        item?.variantTitle ?? item?.variant_title,
+        60
+      );
 
       if (existing) updated += 1;
       else inserted += 1;
@@ -156,6 +167,7 @@ export default async function handler(req, res) {
         images,
         stock: toStock(item?.stock ?? item?.unit, 25),
         low_stock_at: Math.max(1, readInt(item?.lowStockAt ?? item?.low_stock_at, 5)),
+        ...(variantTitle ? { variant_title: variantTitle } : {}),
         status,
         featured: existing?.featured ?? Boolean(item?.featured),
         rating_rate: existing?.rating_rate ?? 4.8,
@@ -163,10 +175,24 @@ export default async function handler(req, res) {
       };
     });
 
-    const { data: savedRows, error: saveError } = await session.supabase
+    let { data: savedRows, error: saveError } = await session.supabase
       .from("products")
       .upsert(rows, { onConflict: "sku" })
       .select("id, sku, status");
+
+    // A database that has not run the latest schema.sql yet has no variant_title
+    // column; sync the catalogue anyway and keep the default heading.
+    if (isMissingColumn(saveError, "variant_title")) {
+      const withoutTitle = rows.map((row) => {
+        const copy = { ...row };
+        delete copy.variant_title;
+        return copy;
+      });
+      ({ data: savedRows, error: saveError } = await session.supabase
+        .from("products")
+        .upsert(withoutTitle, { onConflict: "sku" })
+        .select("id, sku, status"));
+    }
 
     if (saveError) {
       return dbError(res, saveError, "We could not sync the repo to the catalogue.");
@@ -175,115 +201,29 @@ export default async function handler(req, res) {
     const productBySku = new Map(
       (savedRows || []).map((row) => [String(row.sku), row])
     );
-    const productIds = (savedRows || []).map((row) => row.id);
 
-    const variantRows = entries.flatMap((item, index) => {
-      const product = productBySku.get(skus[index]);
-      if (!product) return [];
+    const groups = entries
+      .map((item, index) => {
+        const product = productBySku.get(skus[index]);
+        if (!product) return null;
 
-      const price = toPrice(item?.selling_price ?? item?.price);
-      const rawSizes = Array.isArray(item?.sizes) ? item.sizes : [];
-
-      return buildVariantRows(item, price).map((variant) => {
-        const sizeInRepo = rawSizes.find(
-          (size) =>
-            cleanText(size?.value, 80) === variant.value ||
-            cleanText(size?.label, 80) === variant.label ||
-            cleanText(size?.label ?? size?.value, 80) === variant.label
-        );
-        const meta =
-          Array.isArray(sizeInRepo?.meta) && sizeInRepo.meta.length
-            ? sizeInRepo.meta.filter(
-                (entry) =>
-                  typeof entry === "object" &&
-                  String(entry.key ?? "").trim() &&
-                  String(entry.value ?? "").trim()
-              )
-            : [];
+        const price = toPrice(item?.selling_price ?? item?.price);
         return {
-          product_id: product.id,
-          value: variant.value,
-          label: variant.label,
-          price: variant.price,
-          stock: variant.stock,
-          is_default: variant.is_default,
-          meta,
+          productId: product.id,
+          options: normalizeVariantOptions(buildVariantRows(item, price), price),
         };
-      });
-    });
+      })
+      .filter(Boolean);
 
-    // One row per product/value: the table is unique on (product_id, value) and
-    // a repeated value would fail the whole sync.
-    const uniqueVariants = [
-      ...new Map(variantRows.map((variant) => [`${variant.product_id}:${variant.value}`, variant])).values(),
-    ];
-
-    const { data: existingVariants } = productIds.length
-      ? await session.supabase
-          .from("product_variants")
-          .select("id, product_id, value, label")
-          .in("product_id", productIds)
-      : { data: [] };
-
-    const existingByKey = new Map(
-      (existingVariants || []).map((variant) => [`${variant.product_id}:${variant.value}`, variant])
-    );
-    const existingByLabel = new Map(
-      (existingVariants || []).map((variant) => [`${variant.product_id}:${variant.label}`, variant])
-    );
-
-    const toInsert = [];
-    const toUpdate = [];
-
-    for (const variant of uniqueVariants) {
-      const existing =
-        existingByKey.get(`${variant.product_id}:${variant.value}`) ||
-        existingByLabel.get(`${variant.product_id}:${variant.label}`);
-
-      if (existing) {
-        // Update in place so an option that already exists keeps its id, its
-        // stock and any attributes an admin added to it.
-        toUpdate.push({ id: existing.id, ...variant, value: variant.value });
-      } else {
-        toInsert.push(variant);
-      }
-    }
-
-    for (const variant of toUpdate) {
-      const { id, value, ...updates } = variant;
-      let { error: updateError } = await session.supabase
-        .from("product_variants")
-        .update(updates)
-        .eq("id", id);
-
-      if (isMissingMetaColumn(updateError)) {
-        const { meta, ...withoutMeta } = updates;
-        ({ error: updateError } = await session.supabase
-          .from("product_variants")
-          .update(withoutMeta)
-          .eq("id", id));
-      }
-
-      if (updateError) {
-        return dbError(res, updateError, "We could not sync the product options for the repo.");
-      }
-    }
-
-    for (let index = 0; index < toInsert.length; index += MAX_VARIANTS_PER_INSERT) {
-      const chunk = toInsert.slice(index, index + MAX_VARIANTS_PER_INSERT);
-      let { error: variantError } = await session.supabase
-        .from("product_variants")
-        .insert(chunk);
-
-      if (isMissingMetaColumn(variantError)) {
-        ({ error: variantError } = await session.supabase
-          .from("product_variants")
-          .insert(chunk.map(({ meta, ...rest }) => rest)));
-      }
-
-      if (variantError) {
-        return dbError(res, variantError, "We could not sync the product options for the repo.");
-      }
+    try {
+      // replace: an option removed in the repo editor disappears from the shop.
+      await syncVariantGroups(session.supabase, groups, { replace: true });
+    } catch (variantError) {
+      return dbError(
+        res,
+        variantError,
+        "We could not sync the product options for the repo."
+      );
     }
 
     const active = (savedRows || []).filter((row) => row.status === "ACTIVE").length;

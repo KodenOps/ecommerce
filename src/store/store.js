@@ -185,8 +185,19 @@ export function StoreProvider({ children }) {
             )
             .map((entry) => ({ key: String(entry.key).trim(), value: String(entry.value).trim() }))
         : [];
+      // The option's own name ("Red") plus the group's title ("Colour") read as
+      // "Colour: Red" everywhere the line is shown: bag, checkout, order, email.
+      const groupTitle = String(product.variantTitle || "").trim();
+      const variantLabel = String(variant?.label || "").trim();
       const pickedVariant = variant
-        ? { value: variant.value, label: variant.label, meta }
+        ? {
+            value: variant.value,
+            label:
+              groupTitle && variantLabel && !variant.synthetic
+                ? `${groupTitle}: ${variantLabel}`
+                : variantLabel,
+            meta,
+          }
         : null;
 
       if (availableStock <= 0) {

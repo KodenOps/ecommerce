@@ -15,6 +15,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import AdminShell from "@/components/AdminShell";
+import VariantEditor from "@/components/VariantEditor";
 import { adminPageProps } from "@/lib/routeGuards";
 import { formatNaira } from "@/lib/money";
 
@@ -48,6 +49,8 @@ const EMPTY = {
   status: "ACTIVE",
   featured: false,
   description: "",
+  variantTitle: "Options",
+  variants: [],
 };
 
 const readRepoOverrides = () => {
@@ -83,6 +86,7 @@ const toRepoPayload = (product) => {
     lowStockAt: Number(product?.lowStockAt || 5),
     listed: product?.status === "ACTIVE",
     description: product?.description || "",
+    variantTitle: product?.variantTitle || "Options",
     sizes: Array.isArray(product?.sizes) ? product.sizes.map((size, index) => ({
       value: String(size?.value || size?.label || "default"),
       label: String(size?.label || size?.value || "Standard"),
@@ -232,6 +236,18 @@ export default function AdminProducts() {
       status: product.status,
       featured: Boolean(product.featured),
       description: product.description,
+      variantTitle: product.variantTitle || "Options",
+      // The mapper adds a "Standard" placeholder for products without saved
+      // options; it is not a real option, so it must not be sent back.
+      variants: (Array.isArray(product.sizes) ? product.sizes : [])
+        .filter((size) => !size.synthetic)
+        .map((size) => ({
+          value: size.value,
+          label: size.label,
+          price: Number(size.price || 0),
+          stock: Number(size.stock || 0),
+          is_default: Boolean(size.isDefault ?? size.is_default),
+        })),
     });
     setIsModalOpen(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -265,6 +281,9 @@ export default function AdminProducts() {
           oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
           stock: Number(form.stock),
           lowStockAt: Number(form.lowStockAt),
+          variants: (form.variants || []).filter((variant) =>
+            String(variant.label || "").trim()
+          ),
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -286,6 +305,8 @@ export default function AdminProducts() {
         lowStockAt: Number(form.lowStockAt),
         status: form.status,
         description: form.description,
+        variantTitle: form.variantTitle,
+        sizes: form.variants,
       };
 
       syncProductToRepo(savedProduct);
@@ -724,6 +745,13 @@ export default function AdminProducts() {
                     />
                     Feature on the storefront
                   </label>
+
+                  <VariantEditor
+                    title={form.variantTitle}
+                    options={form.variants}
+                    onTitleChange={(value) => setForm({ ...form, variantTitle: value })}
+                    onChange={(variants) => setForm({ ...form, variants })}
+                  />
 
                   {state.error && (
                     <p className="flex items-center gap-1.5 rounded-xl border border-accent/30 bg-accent-soft/60 px-3 py-2 text-[11px] font-medium text-accent">

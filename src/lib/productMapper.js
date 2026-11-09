@@ -80,7 +80,9 @@ function normalizeSizes(row) {
   }
 
   if (fallbackPrice > 0 && (row?.title || row?.name)) {
-    return [{ value: "default", label: "Standard", price: fallbackPrice, stock: Number(row?.stock ?? 0) || 0 }];
+    // A product with no saved options still sells at its own price. The flag
+    // lets the admin editors tell this placeholder apart from a real option.
+    return [{ value: "default", label: "Standard", price: fallbackPrice, stock: Number(row?.stock ?? 0) || 0, synthetic: true }];
   }
 
   return [];
@@ -134,6 +136,8 @@ export function toStoreProduct(row) {
     status: row.status,
     featured: Boolean(row.featured),
     createdAt: row.created_at,
+    // "Colour", "Size", "Flavour" — the heading above the product's options.
+    variantTitle: row.variant_title || "Options",
     sizes,
   };
 }

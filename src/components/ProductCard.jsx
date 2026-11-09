@@ -13,7 +13,7 @@ const ProductCard = ({ product, compact = false }) => {
 
   const options = useMemo(() => {
     if (Array.isArray(product.sizes) && product.sizes.length) return product.sizes;
-    return [{ value: "default", label: "Standard", price: product.price, stock: product.stock }];
+    return [{ value: "default", label: "Standard", price: product.price, stock: product.stock, synthetic: true }];
   }, [product]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -151,7 +151,9 @@ const ProductCard = ({ product, compact = false }) => {
           <div className="w-full max-w-md rounded-[28px] border border-line bg-surface p-4 shadow-elevated">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">Choose option</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+                  {product.variantTitle || "Choose option"}
+                </p>
                 <h3 className="font-display text-xl text-ink">{product.title}</h3>
               </div>
               <button type="button" onClick={() => setPickerOpen(false)} className="btn-ghost px-2 py-1 text-xs">
@@ -162,12 +164,6 @@ const ProductCard = ({ product, compact = false }) => {
                 {options.map((option) => {
                   const optionPrice = Number(option.price ?? product.price ?? 0);
                   const active = selectedVariant?.value === option.value;
-                  const hasMeta = Array.isArray(option.meta) && option.meta.length > 0;
-                  const metaLines = hasMeta
-                    ? option.meta
-                        .map((meta) => `${meta.key}: ${meta.value}`)
-                        .join(" · ")
-                    : null;
                   return (
                     <button
                       key={`${product.id}-${option.value}`}
@@ -184,9 +180,6 @@ const ProductCard = ({ product, compact = false }) => {
                           <span className="text-sm font-semibold">
                             {option.label || option.value}
                           </span>
-                          {metaLines && (
-                            <span className="block text-[11px] text-accent">{metaLines}</span>
-                          )}
                         </div>
                         {active && <FiCheck size={14} className="mt-0.5" />}
                       </div>
