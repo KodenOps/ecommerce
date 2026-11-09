@@ -98,7 +98,7 @@ const ProductCard = ({ product, compact = false }) => {
             className="absolute inset-x-3 bottom-3 flex translate-y-3 items-center justify-center gap-2 rounded-full bg-surface/95 py-2.5 text-xs font-semibold text-ink opacity-0 shadow-card backdrop-blur transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100"
           >
             <FiPlus size={14} />
-            Choose size
+            Choose option{options.length > 1 ? ` (${options.length})` : ""}
           </button>
         </div>
 
@@ -138,7 +138,7 @@ const ProductCard = ({ product, compact = false }) => {
               type="button"
               onClick={openPicker}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-line text-ink-soft transition-all duration-200 hover:border-accent hover:bg-accent hover:text-accent-ink"
-              aria-label={`Choose a size for ${product.title}`}
+              aria-label={`Choose an option for ${product.title}`}
             >
               <FiPlus size={15} />
             </button>
@@ -159,7 +159,7 @@ const ProductCard = ({ product, compact = false }) => {
               </button>
             </div>              <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                {options.map((option, optionIndex) => {
+                {options.map((option) => {
                   const optionPrice = Number(option.price ?? product.price ?? 0);
                   const active = selectedVariant?.value === option.value;
                   const hasMeta = Array.isArray(option.meta) && option.meta.length > 0;
@@ -168,13 +168,6 @@ const ProductCard = ({ product, compact = false }) => {
                         .map((meta) => `${meta.key}: ${meta.value}`)
                         .join(" · ")
                     : null;
-                  const labelText =
-                    option.label &&
-                    active &&
-                    optionIndex === options.findIndex((o) => o.value === selectedVariant.value)
-                      ? null
-                      : option.label;
-
                   return (
                     <button
                       key={`${product.id}-${option.value}`}
@@ -189,11 +182,8 @@ const ProductCard = ({ product, compact = false }) => {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <span className="text-sm font-semibold">
-                            {labelText || option.label || option.value}
+                            {option.label || option.value}
                           </span>
-                          {labelText && (
-                            <span className="block text-[11px] text-ink-soft">{option.label}</span>
-                          )}
                           {metaLines && (
                             <span className="block text-[11px] text-accent">{metaLines}</span>
                           )}

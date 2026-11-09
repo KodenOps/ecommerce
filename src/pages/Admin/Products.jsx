@@ -83,11 +83,17 @@ const toRepoPayload = (product) => {
     lowStockAt: Number(product?.lowStockAt || 5),
     listed: product?.status === "ACTIVE",
     description: product?.description || "",
-    sizes: Array.isArray(product?.sizes) ? product.sizes.map((size) => ({
+    sizes: Array.isArray(product?.sizes) ? product.sizes.map((size, index) => ({
       value: String(size?.value || size?.label || "default"),
       label: String(size?.label || size?.value || "Standard"),
       price: Number(size?.price || product?.price || 0),
       stock: Number(size?.stock || 0),
+      is_default: Boolean(size?.is_default ?? size?.isDefault ?? index === 0),
+      meta: Array.isArray(size?.meta)
+        ? size.meta
+            .filter((entry) => String(entry?.key ?? "").trim() && String(entry?.value ?? "").trim())
+            .map((entry) => ({ key: String(entry.key).trim(), value: String(entry.value).trim() }))
+        : [],
     })) : [],
   };
 };

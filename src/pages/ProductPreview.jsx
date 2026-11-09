@@ -32,23 +32,31 @@ const DETAILS = [
 
 export async function getServerSideProps(ctx) {
   const id = typeof ctx.query.id === "string" ? ctx.query.id : "";
-  if (!id) return { props: { initialProduct: null } };
+  if (!id) return { props: { initialProduct: null, productId: "" } };
 
   try {
     const supabase = createServerSupabase(ctx.req, ctx.res);
-    const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
-    return { props: { initialProduct: data ? toStoreProduct(data) : null } };
+    const { data } = await supabase
+      .from("products")
+      .select("*, product_variants(*)")
+      .eq("id", id)
+      .maybeSingle();
+    return { props: { initialProduct: data ? toStoreProduct(data) : null, productId: id } };
   } catch (error) {
-    return { props: { initialProduct: null } };
+    return { props: { initialProduct: null, productId: id } };
   }
 }
 
-export default function ProductPreview({ initialProduct }) {
+export default function ProductPreview({ initialProduct, productId = "" }) {
   const { addToCart, toggleFavorite, isFavorite, catalog, catalogLoading } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
 
-  const product = initialProduct || catalog.find((item) => item.id === initialProduct?.id) || null;
+  const product = useMemo(() => {
+    if (initialProduct) return initialProduct;
+    if (!productId) return null;
+    return catalog.find((item) => String(item.id) === String(productId)) || null;
+  }, [initialProduct, productId, catalog]);
   const productImages = useMemo(() => {
     if (!product) return [];
     const rawImages = Array.isArray(product.images) && product.images.length ? product.images : [];
@@ -64,6 +72,9 @@ export default function ProductPreview({ initialProduct }) {
     [product]
   );
   const [selectedVariantValue, setSelectedVariantValue] = useState(variantOptions[0]?.value || "default");
+  const hasVariantMeta = variantOptions.some(
+    (option) => Array.isArray(option?.meta) && option.meta.length > 0
+  );
 
   useEffect(() => {
     setSelectedVariantValue(variantOptions[0]?.value || "default");
@@ -208,19 +219,12 @@ export default function ProductPreview({ initialProduct }) {
             {variantOptions.length > 0 && (
               <div className="card p-4">
                 <p className="label">
-                  {variantOptions.length === 1
-                    ? "Choose option"
-                    : Array.isArray(variantOptions[0]?.meta) && variantOptions[0].meta.length > 0
-                    ? "Choose variant"
-                    : "Choose size"}
+                  {hasVariantMeta ? "Choose variant" : variantOptions.length === 1 ? "Choose option" : "Choose size"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {variantOptions.map((option, optionIndex) => {
+                  {variantOptions.map((option) => {
                     const active =
                       String(selectedVariantValue) === String(option.value);
-                    const isDefaultForProduct =
-                      Array.isArray(variantOptions[0]?.meta) &&
-                      variantOptions[0].meta.length > 0;
                     const hasMeta =
                       Array.isArray(option.meta) && option.meta.length > 0;
                     const metaLines = hasMeta
@@ -228,39 +232,33 @@ export default function ProductPreview({ initialProduct }) {
                           .map((meta) => `${meta.key}: ${meta.value}`)
                           .join(" · ")
                       : null;
-                    const optionLabel =
-                      active && optionIndex === variantOptions.findIndex((o) => o.value === selectedVariantValue)
-                        ? null
-                        : option.label;
                     return (
                       <button
                         key={`${product.id}-${option.value}`}
                         type="button"
                         onClick={() => setSelectedVariantValue(option.value)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                        className={`rounded-2xl border px-3 py-1.5 text-left text-xs font-medium transition-all ${
                           active
                             ? "border-accent bg-accent text-accent-ink"
                             : "border-line bg-surface-2 text-ink-soft hover:border-accent/60 hover:text-accent"
                         }`}
                       >
                         <span className="block">
-                          {optionLabel || option.label || option.value}
+                          {option.label || option.value}
                         </span>
-                        {optionLabel && (
-                          <span className="block text-[10px] text-ink-soft">
-                            {option.label}
-                          </span>
-                        )}
                         {metaLines && (
                           <span className="block text-[10px] text-accent">
                             {metaLines}
                           </span>
                         )}
+                        <span className="block text-[10px] opacity-70">
+                          {formatNaira(Number(option.price ?? product.price ?? 0))}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
-                {hasMeta && (
+                {hasVariantMeta && (
                   <p className="mt-2 text-[11px] text-ink-soft">
                     Pick the variant that matches what you want — colour, flavour, pack size, and anything else
                   </p>

@@ -57,6 +57,8 @@ const normalizeRepoProduct = (item) => {
       label: String(size?.label || size?.value || `Size ${index + 1}`),
       price: Number(size?.price ?? item?.selling_price ?? item?.price ?? 0) || 0,
       stock: Number(size?.stock ?? item?.unit ?? 25) || 25,
+      is_default: Boolean(size?.is_default ?? size?.isDefault ?? index === 0),
+      meta: Array.isArray(size?.meta) ? size.meta : [],
     })),
     sku: item?.id || item?.sku || "",
     description: `${item?.brand || "QueenFizzie"} • ${sizes.length ? sizes.map((size) => size.label || size.value).join(", ") : "Multiple sizes available"}`,

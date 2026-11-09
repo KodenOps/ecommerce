@@ -81,6 +81,7 @@ create table if not exists public.product_variants (
   price       integer not null default 0 check (price >= 0),
   stock       integer not null default 0 check (stock >= 0),
   is_default  boolean not null default false,
+  meta        jsonb not null default '[]'::jsonb,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   unique (product_id, value)
@@ -193,6 +194,9 @@ create table if not exists public.promo_redemptions (
 );
 
 alter table public.products add column if not exists images text[] not null default '{}';
+
+-- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
+alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
 
 do $$
 begin

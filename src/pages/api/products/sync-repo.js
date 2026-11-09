@@ -54,6 +54,12 @@ function imageListFor(item, fallback) {
   return images.length ? images : [fallback];
 }
 
+function isMissingMetaColumn(error) {
+  if (!error) return false;
+  const message = `${error.message || ""} ${error.details || ""}`;
+  return /\bmeta\b/i.test(message) && (error.code === "PGRST204" || error.code === "42703");
+}
+
 function buildVariantRows(item, fallbackPrice) {
   const rawSizes = Array.isArray(item?.sizes) ? item.sizes : [];
 
@@ -171,17 +177,6 @@ export default async function handler(req, res) {
     );
     const productIds = (savedRows || []).map((row) => row.id);
 
-    if (productIds.length) {
-      const { error: clearError } = await session.supabase
-        .from("product_variants")
-        .delete()
-        .in("product_id", productIds);
-
-      if (clearError) {
-        return dbError(res, clearError, "We could not refresh the product options.");
-      }
-    }
-
     const variantRows = entries.flatMap((item, index) => {
       const product = productBySku.get(skus[index]);
       if (!product) return [];
@@ -196,7 +191,15 @@ export default async function handler(req, res) {
             cleanText(size?.label, 80) === variant.label ||
             cleanText(size?.label ?? size?.value, 80) === variant.label
         );
-        const meta = Array.isArray(sizeInRepo?.meta) ? sizeInRepo.meta : null;
+        const meta =
+          Array.isArray(sizeInRepo?.meta) && sizeInRepo.meta.length
+            ? sizeInRepo.meta.filter(
+                (entry) =>
+                  typeof entry === "object" &&
+                  String(entry.key ?? "").trim() &&
+                  String(entry.value ?? "").trim()
+              )
+            : [];
         return {
           product_id: product.id,
           value: variant.value,
@@ -209,57 +212,74 @@ export default async function handler(req, res) {
       });
     });
 
-    const { data: existingVariants, error: listVariantsError } = await session.supabase
-      .from("product_variants")
-      .select("id, product_id, value")
-      .in("product_id", productIds);
+    // One row per product/value: the table is unique on (product_id, value) and
+    // a repeated value would fail the whole sync.
+    const uniqueVariants = [
+      ...new Map(variantRows.map((variant) => [`${variant.product_id}:${variant.value}`, variant])).values(),
+    ];
 
-    if (!listVariantsError && existingVariants && existingVariants.length) {
-      const existingByProduct = new Map();
-      for (const variant of existingVariants) {
-        const list = existingByProduct.get(variant.product_id) || [];
-        list.push(variant);
-        existingByProduct.set(variant.product_id, list);
-      }
+    const { data: existingVariants } = productIds.length
+      ? await session.supabase
+          .from("product_variants")
+          .select("id, product_id, value, label")
+          .in("product_id", productIds)
+      : { data: [] };
 
-      for (const variant of variantRows) {
-        const existingForProduct = existingByProduct.get(variant.product_id) || [];
-        const stillExists =
-          existingForProduct.some(
-            (existing) =>
-              existing.value === variant.value ||
-              existing.label === variant.label
-          );
+    const existingByKey = new Map(
+      (existingVariants || []).map((variant) => [`${variant.product_id}:${variant.value}`, variant])
+    );
+    const existingByLabel = new Map(
+      (existingVariants || []).map((variant) => [`${variant.product_id}:${variant.label}`, variant])
+    );
 
-        if (!stillExists) {
-          const { error: restoreError } = await session.supabase
-            .from("product_variants")
-            .insert({
-              product_id: variant.product_id,
-              value: variant.value,
-              label: variant.label,
-              price: variant.price,
-              stock: variant.stock,
-              is_default: variant.is_default,
-              meta: variant.meta,
-            });
+    const toInsert = [];
+    const toUpdate = [];
 
-          if (restoreError) {
-            return dbError(
-              res,
-              restoreError,
-              "We could not keep an older product option that is still being used in the shop."
-            );
-          }
-        }
+    for (const variant of uniqueVariants) {
+      const existing =
+        existingByKey.get(`${variant.product_id}:${variant.value}`) ||
+        existingByLabel.get(`${variant.product_id}:${variant.label}`);
+
+      if (existing) {
+        // Update in place so an option that already exists keeps its id, its
+        // stock and any attributes an admin added to it.
+        toUpdate.push({ id: existing.id, ...variant, value: variant.value });
+      } else {
+        toInsert.push(variant);
       }
     }
 
-    for (let index = 0; index < variantRows.length; index += MAX_VARIANTS_PER_INSERT) {
-      const chunk = variantRows.slice(index, index + MAX_VARIANTS_PER_INSERT);
-      const { error: variantError } = await session.supabase
+    for (const variant of toUpdate) {
+      const { id, value, ...updates } = variant;
+      let { error: updateError } = await session.supabase
+        .from("product_variants")
+        .update(updates)
+        .eq("id", id);
+
+      if (isMissingMetaColumn(updateError)) {
+        const { meta, ...withoutMeta } = updates;
+        ({ error: updateError } = await session.supabase
+          .from("product_variants")
+          .update(withoutMeta)
+          .eq("id", id));
+      }
+
+      if (updateError) {
+        return dbError(res, updateError, "We could not sync the product options for the repo.");
+      }
+    }
+
+    for (let index = 0; index < toInsert.length; index += MAX_VARIANTS_PER_INSERT) {
+      const chunk = toInsert.slice(index, index + MAX_VARIANTS_PER_INSERT);
+      let { error: variantError } = await session.supabase
         .from("product_variants")
         .insert(chunk);
+
+      if (isMissingMetaColumn(variantError)) {
+        ({ error: variantError } = await session.supabase
+          .from("product_variants")
+          .insert(chunk.map(({ meta, ...rest }) => rest)));
+      }
 
       if (variantError) {
         return dbError(res, variantError, "We could not sync the product options for the repo.");

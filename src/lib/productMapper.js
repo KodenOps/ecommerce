@@ -1,3 +1,12 @@
+function safeParseMeta(value) {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 /** Supabase rows → the camelCase shape the storefront consumes. */
 function normalizeSizeOption(size, fallbackPrice = 0) {
   if (!size || typeof size !== "object") return null;
@@ -9,9 +18,11 @@ function normalizeSizeOption(size, fallbackPrice = 0) {
 
   if (!value || !label) return null;
 
+  const rawMeta = typeof size.meta === "string" ? safeParseMeta(size.meta) : size.meta;
+
   const meta =
-    Array.isArray(size.meta)
-      ? size.meta
+    Array.isArray(rawMeta)
+      ? rawMeta
           .filter(
             (item) =>
               typeof item === "object" &&
