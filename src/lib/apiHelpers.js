@@ -127,3 +127,10 @@ export function readInt(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number) : fallback;
 }
+
+export function readBool(value, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value === "1" || value.toLowerCase() === "true";
+  if (typeof value === "number") return value !== 0;
+  return Boolean(value) && fallback;
+}

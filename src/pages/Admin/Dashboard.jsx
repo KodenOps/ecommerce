@@ -213,6 +213,7 @@ export default function AdminDashboard() {
           <section className="card p-4">
             <p className="label">Quick actions</p>
             <div className="mt-3 flex flex-col gap-2">
+              <Link href="/Admin/Categories" className="btn-secondary text-xs">Manage product categories</Link>
               <Link href="/Admin/Products" className="btn-secondary text-xs">Add or restock a product</Link>
               <Link href="/Admin/Promos" className="btn-secondary text-xs">Create a promo code</Link>
               <Link href="/Admin/Finances" className="btn-secondary text-xs">Open finance report</Link>

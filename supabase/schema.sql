@@ -202,6 +202,14 @@ alter table public.products add column if not exists images text[] not null defa
 -- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
 alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
 
+alter table public.categories add column if not exists code text not null default 'general';
+alter table public.categories add column if not exists name text not null default 'General';
+alter table public.categories add column if not exists color text not null default '#1a1a1a';
+alter table public.categories add column if not exists description text not null default '';
+alter table public.categories add column if not exists created_at timestamptz not null default now();
+alter table public.categories add column if not exists updated_at timestamptz not null default now();
+
+
 -- The title of a product's option group ("Colour", "Size", "Flavour"...).
 -- Products created before this column existed keep the default heading.
 alter table public.products add column if not exists variant_title text not null default 'Options';
@@ -224,9 +232,20 @@ end $$;
 
 create index if not exists profiles_role_idx on public.profiles (role);
 create index if not exists addresses_user_idx on public.addresses (user_id);
-create index if not exists products_status_idx on public.products (status);
-create index if not exists products_category_idx on public.products (category);
+create index if not exists products_status_idx on public.products (status);create index if not exists products_category_idx on public.products (category);
+
+create table if not exists public.categories (
+  id         uuid primary key default gen_random_uuid(),
+  code       text not null unique,
+  name       text not null,
+  color      text not null default '#1a1a1a',
+  description text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists product_variants_product_idx on public.product_variants (product_id);
+
 create index if not exists product_variants_default_idx on public.product_variants (product_id, is_default);
 create index if not exists orders_user_idx on public.orders (user_id);
 create index if not exists orders_status_idx on public.orders (status);
@@ -251,6 +270,10 @@ create trigger products_touch before update on public.products
 
 drop trigger if exists product_variants_touch on public.product_variants;
 create trigger product_variants_touch before update on public.product_variants
+  for each row execute function public.touch_updated_at();
+
+drop trigger if exists categories_touch on public.categories;
+create trigger categories_touch before update on public.categories
   for each row execute function public.touch_updated_at();
 
 drop trigger if exists promos_touch on public.promos;
@@ -397,6 +420,28 @@ create policy products_select on public.products
 
 drop policy if exists products_admin_write on public.products;
 create policy products_admin_write on public.products
+  for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+-- Storefront category helpers
+create or replace function public.categories_public()
+returns setof public.categories
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select * from public.categories order by upper(name);
+$$;
+
+grant execute on function public.categories_public() to anon, authenticated;
+
+-- Categories: admin management, public read-only list
+create policy categories_select on public.categories
+  for select to anon, authenticated
+  using (true);
+
+create policy categories_admin_write on public.categories
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
