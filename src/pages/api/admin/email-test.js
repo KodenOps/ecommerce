@@ -81,6 +81,8 @@ export default async function handler(req, res) {
     order_events: [],
   };
 
+  console.log("[email-test] sending to", to, "from", mailConfig.from, "with port", mailConfig.port, "secure", mailConfig.secure);
+
   try {
     await sendOrderPlacedEmail({
       order: testOrder,
@@ -88,10 +90,12 @@ export default async function handler(req, res) {
       supabase: session.supabase,
       receipt: null,
     });
+    console.log("[email-test] sent ok for", to);
     return sendJson(res, 201, { ok: `Test email sent to ${to}.` });
   } catch (error) {
-    console.error("[email-test] failed", error);
-    if (error?.code === "ETRANSPORTCLOSED" || error?.message?.includes("connect") || error?.message?.includes("ETIMEDOUT") || error?.message?.includes("ECONNREFUSED")) {
+    const raw = String(error?.message || error?.toString?.() || "");
+    console.error("[email-test] failed for", to, "error", error?.code, raw, JSON.stringify(error?.stack));
+    if (error?.code === "ETRANSPORTCLOSED" || raw.includes("connect") || raw.includes("ETIMEDOUT") || raw.includes("ECONNREFUSED")) {
       return dbError(error, "Could not reach the mail server. Check SMTP_HOST, SMTP_PORT and your network.");
     }
     return dbError(error, "Could not send that test email.");
