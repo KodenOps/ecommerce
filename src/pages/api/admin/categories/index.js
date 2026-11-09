@@ -1,4 +1,4 @@
-import { allowMethods, dbError, readString, requireAdminSession, sameOrigin, sendJson } from "@/lib/apiHelpers";
+import { allowMethods, dbError, readString, readInt, requireAdminSession, sameOrigin, sendJson } from "@/lib/apiHelpers";
 import { cleanText } from "@/lib/validation";
 import { loadAllCategories } from "@/api/categories";
 
@@ -10,6 +10,7 @@ const readCategoryRow = (row) => {
     name: cleanText(row.name, 80) || row.name,
     color: cleanText(row.color, 20) || row.color || "#1a1a1a",
     description: cleanText(row.description, 500) || row.description || "",
+    archived_at: row.archived_at ? new Date(row.archived_at).getTime() : null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -33,6 +34,7 @@ export default async function handler(req, res) {
     const name = cleanText(body.name, 80);
     const color = cleanText(body.color, 20);
     const description = cleanText(body.description, 500);
+    const archivedAt = readInt(body.archivedAt, 0);
 
     if (!code) return sendJson(res, 400, { error: "Add a category code, e.g. skincare." });
     if (!name) return sendJson(res, 400, { error: "Add a category name, e.g. Skincare." });
@@ -45,11 +47,13 @@ export default async function handler(req, res) {
       name,
       color: color || "#1a1a1a",
       description: description || "",
+      archived_at: archivedAt ? new Date(archivedAt * 1000).toISOString() : null,
+      updated_at: new Date().toISOString(),
     };
 
     const { data, error } = await session.supabase
       .from("categories")
-      .upsert({ ...payload, updated_at: new Date().toISOString() }, { onConflict: "code" })
+      .upsert({ ...payload }, { onConflict: "code" })
       .select("*")
       .single();
 
@@ -62,8 +66,19 @@ export default async function handler(req, res) {
     const code = cleanText(body.code, 40);
     if (!code) return sendJson(res, 400, { error: "Pass the category code to delete." });
 
+    const { data: softDeleted } = await session.supabase
+      .from("categories")
+      .update({ archived_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("code", code)
+      .select("id, name")
+      .maybeSingle();
+
+    if (softDeleted) {
+      return sendJson(res, 200, { deleted: code, softDelete: true, name: softDeleted.name });
+    }
+
     const { error } = await session.supabase.from("categories").delete().eq("code", code);
     if (error) return dbError(res, error, "Could not delete that category.");
-    return sendJson(res, 200, { deleted: code });
+    return sendJson(res, 200, { deleted: code, softDelete: false });
   }
 }

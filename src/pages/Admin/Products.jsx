@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   FiAlertCircle,
   FiArchive,
+  FiChevronRight,
   FiCheckCircle,
   FiEdit3,
   FiImage,
@@ -23,7 +24,7 @@ export async function getServerSideProps(ctx) {
   return adminPageProps(ctx);
 }
 
-const CATEGORIES = [
+const FIXED_CATEGORIES = [
   "Skincare",
   "Mists & Toners",
   "Lips & Blush",
@@ -31,6 +32,32 @@ const CATEGORIES = [
   "Scented Candles",
   "Gifts & Sets",
 ];
+
+async function loadCategoriesFromApi(supabaseInstance) {
+  try {
+    const { data, error } = await supabaseInstance.rpc("categories_public").select("id, code, name, color, description");
+    if (error) {
+      const fallback = await supabaseInstance.from("categories").select("id, code, name, color, description").order("name", { ascending: true });
+      if (fallback.error) return [];
+      return (fallback.data || []).map((row) => ({
+        id: row.id,
+        code: String(row.code || "").trim(),
+        name: String(row.name || row.code).trim() || String(row.code).trim(),
+        color: String(row.color || "#1a1a1a").trim() || "#1a1a1a",
+        description: String(row.description || ""),
+      }));
+    }
+    return (data || []).map((row) => ({
+      id: row.id,
+      code: String(row.code || "").trim(),
+      name: String(row.name || row.code).trim() || String(row.code).trim(),
+      color: String(row.color || "#1a1a1a").trim() || "#1a1a1a",
+      description: String(row.description || ""),
+    }));
+  } catch (error) {
+    return [];
+  }
+}
 
 const MAX_PRODUCT_IMAGES = 3;
 
@@ -119,12 +146,24 @@ const syncProductToRepo = (product) => {
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [state, setState] = useState({ loading: true, saving: false, error: "", ok: "" });
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+
+  const openCategorySheet = () => {
+    window.location.assign("/Admin/Categories");
+  };
+
+  useEffect(() => {
+    setCategories(FIXED_CATEGORIES);
+    loadCategoriesFromApi(null).then((attachedCategories) => {
+      setCategories(attachedCategories);
+    });
+  }, []);
 
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: "" }));
@@ -438,6 +477,10 @@ export default function AdminProducts() {
           <button type="button" onClick={load} className="btn-secondary">
             <FiRefreshCw size={14} className={state.loading ? "animate-spin" : ""} /> Refresh
           </button>
+          <button type="button" onClick={openCategorySheet} className="btn-secondary">
+            Manage categories
+            <FiChevronRight size={12} className="-ml-0.5" />
+          </button>
         </div>
       }
     >
@@ -643,7 +686,7 @@ export default function AdminProducts() {
                         onChange={(event) => setForm({ ...form, category: event.target.value })}
                         className="field mt-1.5 cursor-pointer"
                       >
-                        {CATEGORIES.map((category) => (
+                        {FIXED_CATEGORIES.map((category) => (
                           <option key={category} value={category}>{category}</option>
                         ))}
                       </select>
