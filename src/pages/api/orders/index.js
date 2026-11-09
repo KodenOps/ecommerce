@@ -111,7 +111,15 @@ export default async function handler(req, res) {
     return dbError(res, error, "We could not save your order. Please try again.");
   }
 
-  const order = toOrder({ ...data.order, order_items: data.items, order_events: [] });
+  const enrichedItems = data.items.map((item) => ({
+    ...item,
+    product: data.products?.[String(item.product_id)] || null,
+    meta: data.variant_meta?.[String(item.product_id)] || null,
+  }));
+
+  const order = toOrder({ ...data.order, order_items: enrichedItems, order_events: [] });
+
+
 
   try {
     await sendOrderPlacedEmail({

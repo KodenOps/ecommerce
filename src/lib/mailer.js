@@ -70,7 +70,7 @@ export async function sendOrderPlacedEmail({
   const itemsLines = (order.items || [])
     .map(
       (item) =>
-        `        <li><strong>${escapeHtml(item.title || "Product")}</strong>${item.variantLabel ? ` — ${escapeHtml(item.variantLabel)}` : ""}
+        `        <li><strong>${escapeHtml(item.title || "Product")}</strong>${item.variantDetail ? ` — ${escapeHtml(item.variantDetail)}` : ""}
           <br />Qty ${item.qty} × ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? `<br /><span style="color:#6b7280;font-size:0.9em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
         </li>`
     )
@@ -87,7 +87,7 @@ export async function sendOrderPlacedEmail({
     `Coupon used: ${promoCode}`,
     "Items:",
     ...(order.items || []).flatMap((item) => [
-      `  - ${item.title}${item.variantLabel ? ` (${item.variantLabel})` : ""} × ${item.qty} @ ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? ` [SKU ${item.sku}]` : ""}`,
+      `  - ${item.title}${item.variantDetail ? ` (${item.variantDetail})` : ""} × ${item.qty} @ ${formatNaira(item.price)} = ${formatNaira(item.lineTotal)}${item.sku ? ` [SKU ${item.sku}]` : ""}`,
     ]),
     `Total: ${formattedTotal}`,
     `Order URL: ${orderUrl}`,
@@ -119,7 +119,7 @@ export async function sendOrderPlacedEmail({
               (item) => `
             <tr style="border-bottom:1px solid #e5e7eb;">
               <td style="padding:8px;border:1px solid #e5e7eb;">
-                <strong>${escapeHtml(item.title || "Product")}</strong>${(item.variantLabel || item.variantValue) ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(item.variantLabel || item.variantValue)}</span>` : ""}
+                <strong>${escapeHtml(item.title || "Product")}</strong>${item.variantDetail ? `<br/><span style="color:#6b7280;font-size:0.9em;">${escapeHtml(item.variantDetail)}</span>` : ""}
                 ${item.sku ? `<br/><span style="color:#9ca3af;font-size:0.85em;">SKU: ${escapeHtml(item.sku)}</span>` : ""}
               </td>
               <td style="text-align:right;padding:8px;border:1px solid #e5e7eb;">${item.qty}</td>

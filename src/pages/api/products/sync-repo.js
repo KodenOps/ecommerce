@@ -187,15 +187,73 @@ export default async function handler(req, res) {
       if (!product) return [];
 
       const price = toPrice(item?.selling_price ?? item?.price);
-      return buildVariantRows(item, price).map((variant) => ({
-        product_id: product.id,
-        value: variant.value,
-        label: variant.label,
-        price: variant.price,
-        stock: variant.stock,
-        is_default: variant.is_default,
-      }));
+      const rawSizes = Array.isArray(item?.sizes) ? item.sizes : [];
+
+      return buildVariantRows(item, price).map((variant) => {
+        const sizeInRepo = rawSizes.find(
+          (size) =>
+            cleanText(size?.value, 80) === variant.value ||
+            cleanText(size?.label, 80) === variant.label ||
+            cleanText(size?.label ?? size?.value, 80) === variant.label
+        );
+        const meta = Array.isArray(sizeInRepo?.meta) ? sizeInRepo.meta : null;
+        return {
+          product_id: product.id,
+          value: variant.value,
+          label: variant.label,
+          price: variant.price,
+          stock: variant.stock,
+          is_default: variant.is_default,
+          meta,
+        };
+      });
     });
+
+    const { data: existingVariants, error: listVariantsError } = await session.supabase
+      .from("product_variants")
+      .select("id, product_id, value")
+      .in("product_id", productIds);
+
+    if (!listVariantsError && existingVariants && existingVariants.length) {
+      const existingByProduct = new Map();
+      for (const variant of existingVariants) {
+        const list = existingByProduct.get(variant.product_id) || [];
+        list.push(variant);
+        existingByProduct.set(variant.product_id, list);
+      }
+
+      for (const variant of variantRows) {
+        const existingForProduct = existingByProduct.get(variant.product_id) || [];
+        const stillExists =
+          existingForProduct.some(
+            (existing) =>
+              existing.value === variant.value ||
+              existing.label === variant.label
+          );
+
+        if (!stillExists) {
+          const { error: restoreError } = await session.supabase
+            .from("product_variants")
+            .insert({
+              product_id: variant.product_id,
+              value: variant.value,
+              label: variant.label,
+              price: variant.price,
+              stock: variant.stock,
+              is_default: variant.is_default,
+              meta: variant.meta,
+            });
+
+          if (restoreError) {
+            return dbError(
+              res,
+              restoreError,
+              "We could not keep an older product option that is still being used in the shop."
+            );
+          }
+        }
+      }
+    }
 
     for (let index = 0; index < variantRows.length; index += MAX_VARIANTS_PER_INSERT) {
       const chunk = variantRows.slice(index, index + MAX_VARIANTS_PER_INSERT);

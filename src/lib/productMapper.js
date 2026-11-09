@@ -143,7 +143,36 @@ export function toOrderItem(row) {
     qty: row.qty,
     lineTotal: row.line_total,
     image: row.image,
+    variantDetail: variantDetailFor(row),
   };
+}
+
+function variantDetailFor(row) {
+  const product = row.product || row.product_name || null;
+  const productTitle =
+    product && typeof product === "object"
+      ? (product.title || product.name || "")
+      : product || (row.title || "");
+  const label = row.variant_label || row.variantLabel || null;
+  const value = row.variant_value || row.variantValue || null;
+  const meta = Array.isArray(row.variant_meta)
+    ? row.variant_meta
+    : Array.isArray(row.meta)
+      ? row.meta
+      : [];
+  const attributes = (meta || [])
+    .filter(
+      (item) =>
+        typeof item === "object" &&
+        String(item.key).trim() &&
+        String(item.value).trim()
+    )
+    .map((item) => `${String(item.key).trim()} = ${String(item.value).trim()}`)
+    .join(", ");
+  const parts = [productTitle];
+  if (label) parts.push(label);
+  if (attributes) parts.push(attributes);
+  return parts.join(": ");
 }
 
 export function toOrder(row) {
@@ -183,7 +212,7 @@ export function toOrder(row) {
           uploadedAt: row.receipt_uploaded_at,
         }
       : null,
-    items: (row.order_items || []).map(toOrderItem),
+    items: (row.order_items || []).map((item) => toOrderItem({ ...item, product: row })),
     events: (row.order_events || []).map((event) => ({
       id: event.id,
       type: event.type,

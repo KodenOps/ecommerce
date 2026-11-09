@@ -347,15 +347,40 @@ export function StoreProvider({ children }) {
           const unitPrice = Number(line.price ?? selectedVariant?.price ?? product.price ?? 0);
           const unitOldPrice = Number(line.oldprice ?? selectedVariant?.oldprice ?? product.oldprice ?? 0) || null;
 
+          const option = line.variant || (selectedVariant ? { value: selectedVariant.value, label: selectedVariant.label, meta: selectedVariant.meta } : null);
+          const pickedLabel = option?.label ?? selectedVariant?.label ?? null;
+          const pickedAttributes = Array.isArray(option?.meta)
+            ? option.meta
+                .filter(
+                  (meta) =>
+                    typeof meta === "object" && String(meta.key).trim() && String(meta.value).trim()
+                )
+                .map((meta) => `${String(meta.key).trim()} = ${String(meta.value).trim()}`)
+                .join(", ")
+            : Array.isArray(selectedVariant?.meta)
+              ? selectedVariant.meta
+                  .filter(
+                    (meta) =>
+                      typeof meta === "object" && String(meta.key).trim() && String(meta.value).trim()
+                  )
+                  .map((meta) => `${String(meta.key).trim()} = ${String(meta.value).trim()}`)
+                  .join(", ")
+              : null;
+          const selectedVariantDetail =
+            pickedLabel
+              ? `${product.title}: ${pickedLabel}${pickedAttributes ? ` (${pickedAttributes})` : ""}`
+              : product.title;
+
           return {
             ...product,
             key: line.key || `${String(product.id)}:default`,
             qty: line.qty,
             price: unitPrice,
             oldprice: unitOldPrice,
-            variant: line.variant || (selectedVariant ? { value: selectedVariant.value, label: selectedVariant.label } : null),
-            selectedVariantLabel: line.variant?.label ?? selectedVariant?.label ?? null,
-            selectedVariantValue: line.variant?.value ?? selectedVariant?.value ?? null,
+            variant: option ? { value: option.value, label: option.label, meta: option.meta } : null,
+            selectedVariantLabel: pickedLabel,
+            selectedVariantValue: option?.value ?? selectedVariant?.value ?? null,
+            selectedVariantDetail,
           };
         })
         .filter(Boolean),

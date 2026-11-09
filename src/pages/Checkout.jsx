@@ -261,8 +261,10 @@ export default function Checkout() {
                   <li key={item.id} className="flex items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block truncate text-sm text-ink">{item.title}</span>
-                      {item.variantLabel && (
-                        <span className="block truncate text-[11px] text-accent">{item.variantLabel}</span>
+                      {item.variantDetail && (
+                        <span className="block truncate text-[11px] text-accent">
+                          Product variant: {item.variantDetail}
+                        </span>
                       )}
                       <span className="text-[11px] text-muted">Qty {item.qty}</span>
                       {item.sku && (
@@ -700,8 +702,10 @@ export default function Checkout() {
                     <li key={item.id} className="flex items-center justify-between gap-3 px-4 py-3">
                       <span className="min-w-0">
                         <span className="block truncate text-sm text-ink">{item.title}</span>
-                        {item.variantLabel && (
-                          <span className="block truncate text-[11px] text-accent">{item.variantLabel}</span>
+                        {item.variantDetail && (
+                          <span className="block truncate text-[11px] text-accent">
+                            Product variant: {item.variantDetail}
+                          </span>
                         )}
                         <span className="text-[11px] text-muted">Qty {item.qty}</span>
                       </span>
