@@ -157,13 +157,24 @@ const ProductCard = ({ product, compact = false }) => {
               <button type="button" onClick={() => setPickerOpen(false)} className="btn-ghost px-2 py-1 text-xs">
                 Close
               </button>
-            </div>
-
-            <div className="space-y-3">
+            </div>              <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                {options.map((option) => {
+                {options.map((option, optionIndex) => {
                   const optionPrice = Number(option.price ?? product.price ?? 0);
                   const active = selectedVariant?.value === option.value;
+                  const hasMeta = Array.isArray(option.meta) && option.meta.length > 0;
+                  const metaLines = hasMeta
+                    ? option.meta
+                        .map((meta) => `${meta.key}: ${meta.value}`)
+                        .join(" · ")
+                    : null;
+                  const labelText =
+                    option.label &&
+                    active &&
+                    optionIndex === options.findIndex((o) => o.value === selectedVariant.value)
+                      ? null
+                      : option.label;
+
                   return (
                     <button
                       key={`${product.id}-${option.value}`}
@@ -175,9 +186,19 @@ const ProductCard = ({ product, compact = false }) => {
                           : "border-line bg-surface-2 text-ink"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold">{option.label || option.value}</span>
-                        {active && <FiCheck size={14} />}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-sm font-semibold">
+                            {labelText || option.label || option.value}
+                          </span>
+                          {labelText && (
+                            <span className="block text-[11px] text-ink-soft">{option.label}</span>
+                          )}
+                          {metaLines && (
+                            <span className="block text-[11px] text-accent">{metaLines}</span>
+                          )}
+                        </div>
+                        {active && <FiCheck size={14} className="mt-0.5" />}
                       </div>
                       <p className="mt-1 text-xs opacity-80">{formatNaira(optionPrice)}</p>
                     </button>

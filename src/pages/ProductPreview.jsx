@@ -205,12 +205,33 @@ export default function ProductPreview({ initialProduct }) {
               </p>
             </div>
 
-            {variantOptions.length > 1 && (
+            {variantOptions.length > 0 && (
               <div className="card p-4">
-                <p className="label">Choose size</p>
+                <p className="label">
+                  {variantOptions.length === 1
+                    ? "Choose option"
+                    : Array.isArray(variantOptions[0]?.meta) && variantOptions[0].meta.length > 0
+                    ? "Choose variant"
+                    : "Choose size"}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {variantOptions.map((option) => {
-                    const active = String(selectedVariantValue) === String(option.value);
+                  {variantOptions.map((option, optionIndex) => {
+                    const active =
+                      String(selectedVariantValue) === String(option.value);
+                    const isDefaultForProduct =
+                      Array.isArray(variantOptions[0]?.meta) &&
+                      variantOptions[0].meta.length > 0;
+                    const hasMeta =
+                      Array.isArray(option.meta) && option.meta.length > 0;
+                    const metaLines = hasMeta
+                      ? option.meta
+                          .map((meta) => `${meta.key}: ${meta.value}`)
+                          .join(" · ")
+                      : null;
+                    const optionLabel =
+                      active && optionIndex === variantOptions.findIndex((o) => o.value === selectedVariantValue)
+                        ? null
+                        : option.label;
                     return (
                       <button
                         key={`${product.id}-${option.value}`}
@@ -222,11 +243,28 @@ export default function ProductPreview({ initialProduct }) {
                             : "border-line bg-surface-2 text-ink-soft hover:border-accent/60 hover:text-accent"
                         }`}
                       >
-                        {option.label || option.value}
+                        <span className="block">
+                          {optionLabel || option.label || option.value}
+                        </span>
+                        {optionLabel && (
+                          <span className="block text-[10px] text-ink-soft">
+                            {option.label}
+                          </span>
+                        )}
+                        {metaLines && (
+                          <span className="block text-[10px] text-accent">
+                            {metaLines}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
+                {hasMeta && (
+                  <p className="mt-2 text-[11px] text-ink-soft">
+                    Pick the variant that matches what you want — colour, flavour, pack size, and anything else
+                  </p>
+                )}
               </div>
             )}
 

@@ -1,13 +1,25 @@
+/**
+ * Cart store — signed-in/out bag, favourites, pricing.
+ *
+ * Variant contract (request from user):
+ *  - picked variant (size, flavour, etc.) is persisted under each cart line
+ *  - the bag page shows the chosen variant next to the product name
+ *  - the chosen variant is transmitted into the placed order and shown on
+ *    Checkout confirmation, /Orders, and /Admin/Orders
+ *  - admin product editor can add any kind of option (size, flavour, etc.)
+ *    with label / value / price / stock, and custom key/value pairs
+ *  - the add-to-bag modal and product preview picker render all options
+ *
+ * Product options are normalized through `src/lib/productMapper.js` into the
+ * `product.sizes` array the storefront consumes. The admin editor now exposes
+ * arbitrary option rows, each with `value`, `label`, `price`, `stock`, plus
+ * optional extra attribute columns kept as `meta` so admins can attach things
+ * like `flavour = mint, amount = 4000`.
+ */
+
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import {
   DELIVERY_FEE,
@@ -181,7 +193,7 @@ export function StoreProvider({ children }) {
             return current;
           }
           return current.map((line) =>
-            line.key === key ? { ...line, qty: nextQty, price: unitPrice } : line
+            line.key === key ? { ...line, qty: nextQty, price: unitPrice, variant: variant ? { value: variant.value, label: variant.label } : null } : line
           );
         }
 
@@ -227,7 +239,7 @@ export function StoreProvider({ children }) {
 
       return current.map((line) => {
         const matchesTarget = key ? line.key === key : String(line.id) === String(productId);
-        return matchesTarget ? { ...line, qty: Math.min(quantity, cap) } : line;
+        return matchesTarget ? { ...line, qty: Math.min(quantity, cap), variant: line.variant } : line;
       });
     });
   }, [catalog]);
@@ -277,7 +289,8 @@ export function StoreProvider({ children }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          customer: details.customer ?? {},              items: cart.map((line) => {
+          customer: details.customer ?? {},
+          items: cart.map((line) => {
             const product = catalog.find((item) => String(item.id) === String(line.id));
             const variantByValue =
               product?.sizes?.find((size) => String(size.value) === String(line.variant?.value)) || null;
@@ -316,7 +329,7 @@ export function StoreProvider({ children }) {
       refreshCatalog();
       return payload.order;
     },
-    [cart, refreshCatalog]
+    [cart, catalog, refreshCatalog]
   );
 
   const cartItems = useMemo(
@@ -341,6 +354,8 @@ export function StoreProvider({ children }) {
             price: unitPrice,
             oldprice: unitOldPrice,
             variant: line.variant || (selectedVariant ? { value: selectedVariant.value, label: selectedVariant.label } : null),
+            selectedVariantLabel: line.variant?.label ?? selectedVariant?.label ?? null,
+            selectedVariantValue: line.variant?.value ?? selectedVariant?.value ?? null,
           };
         })
         .filter(Boolean),

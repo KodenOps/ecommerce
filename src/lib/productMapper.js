@@ -9,12 +9,28 @@ function normalizeSizeOption(size, fallbackPrice = 0) {
 
   if (!value || !label) return null;
 
+  const meta =
+    Array.isArray(size.meta)
+      ? size.meta
+          .filter(
+            (item) =>
+              typeof item === "object" &&
+              String(item.key).trim() &&
+              String(item.value).trim()
+          )
+          .map((item) => ({
+            key: String(item.key).trim(),
+            value: String(item.value).trim(),
+          }))
+      : [];
+
   return {
     value,
     label,
     price,
     stock,
     isDefault: Boolean(size.is_default ?? size.isDefault),
+    meta,
   };
 }
 

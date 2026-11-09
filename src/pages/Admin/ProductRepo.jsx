@@ -509,9 +509,7 @@ export default function AdminProductRepo() {
                       placeholder="https://images.unsplash.com/..."
                     />
                   </div>
-                </div>
-
-                <div className="space-y-3">
+                </div>                  <div className="space-y-3">
                   <div>
                     <label className="label">Name</label>
                     <input value={repoEditor.name || ""} onChange={(event) => updateRepoEditor("name", event.target.value)} className="field mt-1.5" />
@@ -546,34 +544,155 @@ export default function AdminProductRepo() {
 
                   <div>
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <label className="label">Sizes</label>
+                      <label className="label">Options</label>
                       <button type="button" onClick={addRepoSize} className="btn-secondary text-[10px] px-2 py-1">
-                        <FiPlus size={10} /> Add size
+                        <FiPlus size={10} /> Add option
                       </button>
                     </div>
 
                     <div className="space-y-2">
                       {(repoEditor.sizes || []).map((size, index) => (
-                        <div key={`${repoEditor.id}-${size.value || index}`} className="grid grid-cols-[1fr_1fr_120px] gap-2 rounded-xl border border-line bg-surface p-2">
-                          <input
-                            value={size.label || ""}
-                            onChange={(event) => updateRepoSize(index, "label", event.target.value)}
-                            className="field"
-                            placeholder="Label"
-                          />
-                          <input
-                            value={size.value || ""}
-                            onChange={(event) => updateRepoSize(index, "value", event.target.value)}
-                            className="field"
-                            placeholder="Value"
-                          />
-                          <input
-                            type="number"
-                            value={size.price || 0}
-                            onChange={(event) => updateRepoSize(index, "price", event.target.value)}
-                            className="field"
-                            placeholder="₦"
-                          />
+                        <div key={`${repoEditor.id}-${size.value || index}`} className="rounded-xl border border-line bg-surface p-2">
+                          <div className="mb-2 flex items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
+                              Option {index + 1}
+                            </span>
+                            {size.is_default ? (
+                              <span className="text-[10px] font-medium text-accent">Default</span>
+                            ) : null}
+                          </div>
+
+                          <div className="grid grid-cols-[1fr_1fr_120px] gap-2 rounded-xl border border-line bg-surface-2 p-2">
+                            <input
+                              value={size.label || ""}
+                              onChange={(event) => updateRepoSize(index, "label", event.target.value)}
+                              className="field"
+                              placeholder="Label"
+                            />
+                            <input
+                              value={size.value || ""}
+                              onChange={(event) => updateRepoSize(index, "value", event.target.value)}
+                              className="field"
+                              placeholder="Value"
+                            />
+                            <input
+                              type="number"
+                              value={size.price || 0}
+                              onChange={(event) => updateRepoSize(index, "price", event.target.value)}
+                              className="field"
+                              placeholder="₦"
+                            />
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-2">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(size.is_default)}
+                                onChange={(event) =>
+                                  updateRepoSize(index, "is_default", event.target.checked)
+                                }
+                                className="h-4 w-4 rounded border-line accent-accent"
+                                aria-label="Set as default option"
+                              />
+                              <label className="text-xs text-ink-soft">
+                                Use as the default option
+                              </label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={size.stock || 0}
+                                onChange={(event) =>
+                                  updateRepoSize(index, "stock", Number(event.target.value || 0))
+                                }
+                                className="field"
+                                placeholder="Stock"
+                              />
+                              <label className="text-xs text-ink-soft">Stock</label>
+                            </div>
+                          </div>
+
+                          <div className="mt-2">
+                            <div className="mb-1 flex items-center justify-between">
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-soft">
+                                Extra attributes
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  updateRepoSize(index, "meta", [
+                                    ...(Array.isArray(size.meta) ? size.meta : []),
+                                    { key: "", value: "" },
+                                  ])
+                                }
+                                className="text-[10px] text-accent hover:text-accent-ink"
+                              >
+                                + Add attribute
+                              </button>
+                            </div>
+
+                            <div className="space-y-1">
+                              {(Array.isArray(size.meta) ? size.meta : []).map((meta, metaIndex) => (
+                                <div
+                                  key={`${index}-${metaIndex}`}
+                                  className="flex items-center gap-2"
+                                >
+                                  <input
+                                    value={meta.key || ""}
+                                    onChange={(event) => {
+                                      const next = [...(Array.isArray(size.meta) ? size.meta : [])];
+                                      next[metaIndex] = {
+                                        ...next[metaIndex],
+                                        key: event.target.value,
+                                      };
+                                      updateRepoSize(index, "meta", next);
+                                    }}
+                                    className="field w-1/2"
+                                    placeholder="Key"
+                                  />
+                                  <input
+                                    value={meta.value || ""}
+                                    onChange={(event) => {
+                                      const next = [...(Array.isArray(size.meta) ? size.meta : [])];
+                                      next[metaIndex] = {
+                                        ...next[metaIndex],
+                                        value: event.target.value,
+                                      };
+                                      updateRepoSize(index, "meta", next);
+                                    }}
+                                    className="field w-1/2"
+                                    placeholder="Value"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const next = (Array.isArray(size.meta) ? size.meta : []).filter(
+                                        (_, m) => m !== meta
+                                      );
+                                      updateRepoSize(index, "meta", next);
+                                    }}
+                                    className="text-[10px] text-muted hover:text-accent"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="mt-2 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const next = (repoEditor.sizes || []).filter((_, s) => s !== size);
+                                updateRepoEditor("sizes", next);
+                              }}
+                              className="text-[10px] text-muted hover:text-accent"
+                            >
+                              Remove option
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

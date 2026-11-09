@@ -120,6 +120,11 @@ const Cart = () => {
                             >
                               {item.title}
                             </Link>
+                            {item.selectedVariantLabel && (
+                              <p className="mt-0.5 truncate text-[11px] text-accent">
+                                {item.selectedVariantLabel}
+                              </p>
+                            )}
                           </div>
                           <button
                             type="button"
