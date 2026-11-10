@@ -126,6 +126,8 @@ export function toStoreProduct(row) {
     oldprice,
     description: row.description || "",
     category: row.category,
+    // The catalogue code this product points at (null for legacy free text).
+    categoryCode: row.category_code || null,
     image: primaryImage,
     images,
     rating: { rate: Number(row.rating_rate ?? 4.8), count: row.rating_count ?? 0 },

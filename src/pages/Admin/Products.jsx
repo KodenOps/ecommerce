@@ -60,6 +60,7 @@ const EMPTY = {
   title: "",
   sku: "",
   category: "Skincare",
+  categoryCode: "",
   price: "",
   oldPrice: "",
   image: "",
@@ -249,6 +250,16 @@ export default function AdminProducts() {
     return [...names];
   }, [categories, form.category]);
 
+  // Products store the catalogue code; the picker works with names, so look the
+  // code up whenever a name is chosen.
+  const categoryCodeForName = (name) => {
+    const wanted = String(name || "").trim().toLowerCase();
+    const match = categories.find(
+      (item) => String(item.name || "").trim().toLowerCase() === wanted
+    );
+    return match?.code || "";
+  };
+
   const visibleProducts = useMemo(() => {
     const search = query.trim().toLowerCase();
     return products.filter((product) => {
@@ -276,6 +287,7 @@ export default function AdminProducts() {
       title: product.title,
       sku: product.sku,
       category: product.category,
+      categoryCode: product.categoryCode || categoryCodeForName(product.category),
       price: String(product.price),
       oldPrice: product.oldprice ? String(product.oldprice) : "",
       image: images[0] || "",
@@ -324,6 +336,7 @@ export default function AdminProducts() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          categoryCode: form.categoryCode || categoryCodeForName(form.category),
           images,
           image: images[0] || "",
           price: Number(form.price),
@@ -693,7 +706,13 @@ export default function AdminProducts() {
                       <select
                         id="category"
                         value={form.category}
-                        onChange={(event) => setForm({ ...form, category: event.target.value })}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            category: event.target.value,
+                            categoryCode: categoryCodeForName(event.target.value),
+                          })
+                        }
                         className="field mt-1.5 cursor-pointer"
                       >
                         {categorySelectOptions.map((category) => (

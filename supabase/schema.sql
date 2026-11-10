@@ -244,6 +244,76 @@ create table if not exists public.categories (
   updated_at timestamptz not null default now()
 );
 
+-- Products point at the category catalogue: category_code is the real
+-- reference, while category keeps the display name so existing reads (cards,
+-- filters, order copy) keep working without a join.
+alter table public.products add column if not exists category_code text;
+
+-- Seed the built-in categories plus one row per category already in use, so
+-- products created before the catalogue existed can be linked to it.
+insert into public.categories (code, name)
+select v.code, v.name
+from (values
+  ('skincare', 'Skincare'),
+  ('mists-toners', 'Mists & Toners'),
+  ('lips-blush', 'Lips & Blush'),
+  ('body-glow', 'Body Glow'),
+  ('scented-candles', 'Scented Candles'),
+  ('gifts-sets', 'Gifts & Sets')
+) as v(code, name)
+on conflict (code) do nothing;
+
+insert into public.categories (code, name)
+select distinct on (code) code, name
+from (
+  select
+    trim(both '-' from lower(regexp_replace(trim(category), '[^a-zA-Z0-9]+', '-', 'g'))) as code,
+    trim(category) as name
+  from public.products
+  where trim(coalesce(category, '')) <> ''
+) existing
+where code <> ''
+order by code, name
+on conflict (code) do nothing;
+
+update public.products p
+set category_code = c.code
+from public.categories c
+where p.category_code is null
+  and lower(trim(p.category)) = lower(c.name);
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'products_category_code_fkey'
+  ) then
+    alter table public.products
+      add constraint products_category_code_fkey
+      foreign key (category_code) references public.categories (code)
+      on update cascade on delete set null;
+  end if;
+end $$;
+
+create index if not exists products_category_code_idx on public.products (category_code);
+
+-- Renaming a category in the catalogue renames it on the products that use it,
+-- so the denormalised display name never drifts from the catalogue.
+create or replace function public.sync_product_category_name()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.products set category = new.name where category_code = new.code;
+  return new;
+end;
+$$;
+
+drop trigger if exists categories_rename_products on public.categories;
+create trigger categories_rename_products after update of name on public.categories
+  for each row execute function public.sync_product_category_name();
+
 create index if not exists product_variants_product_idx on public.product_variants (product_id);
 
 create index if not exists product_variants_default_idx on public.product_variants (product_id, is_default);

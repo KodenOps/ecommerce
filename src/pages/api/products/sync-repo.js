@@ -7,6 +7,7 @@ import {
   sendJson,
 } from "@/lib/apiHelpers";
 import productRepo from "@/data/product_repo";
+import { ensureCategories } from "@/api/categories";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
 import {
   isMissingColumn,
@@ -125,6 +126,13 @@ export default async function handler(req, res) {
       (existingRows || []).map((row) => [String(row.sku), row])
     );
 
+    // Imported products point at the catalogue too, so the category an import
+    // uses is the same row an admin sees in /Admin/Categories.
+    const categoriesByName = await ensureCategories(
+      session.supabase,
+      entries.map((item) => cleanText(item?.category, 60))
+    );
+
     let inserted = 0;
     let updated = 0;
 
@@ -133,7 +141,11 @@ export default async function handler(req, res) {
       const existing = existingBySku.get(sku) || null;
       const title = cleanText(item?.name || item?.title, 120) || "Untitled product";
       const price = toPrice(item?.selling_price ?? item?.price);
-      const category = cleanText(item?.category, 60) || "Skincare";
+      const categoryName = cleanText(item?.category, 60) || "Skincare";
+      const category = categoriesByName.get(categoryName.toLowerCase()) || {
+        code: null,
+        name: categoryName,
+      };
       const brand = cleanText(item?.brand, 80) || "QueenFizzie";
       const images = imageListFor(item, existing?.image || FALLBACK_IMAGE);
       const image = images[0] || FALLBACK_IMAGE;
@@ -157,8 +169,9 @@ export default async function handler(req, res) {
         slug,
         sku,
         description:
-          cleanMultiline(item?.description, 900) || `${brand} • ${category}`,
-        category,
+          cleanMultiline(item?.description, 900) || `${brand} • ${category.name}`,
+        category: category.name,
+        category_code: category.code || null,
         price,
         // Never use cost price as a compare-at price. Only an explicit
         // compare-at value above the selling price is a real discount.
@@ -180,18 +193,21 @@ export default async function handler(req, res) {
       .upsert(rows, { onConflict: "sku" })
       .select("id, sku, status");
 
-    // A database that has not run the latest schema.sql yet has no variant_title
-    // column; sync the catalogue anyway and keep the default heading.
-    if (isMissingColumn(saveError, "variant_title")) {
-      const withoutTitle = rows.map((row) => {
-        const copy = { ...row };
-        delete copy.variant_title;
-        return copy;
-      });
-      ({ data: savedRows, error: saveError } = await session.supabase
-        .from("products")
-        .upsert(withoutTitle, { onConflict: "sku" })
-        .select("id, sku, status"));
+    // A database that has not run the latest schema.sql yet has no category_code
+    // or variant_title column; sync the catalogue anyway.
+    let syncRows = rows;
+    for (const column of ["variant_title", "category_code"]) {
+      if (isMissingColumn(saveError, column)) {
+        syncRows = syncRows.map((row) => {
+          const copy = { ...row };
+          delete copy[column];
+          return copy;
+        });
+        ({ data: savedRows, error: saveError } = await session.supabase
+          .from("products")
+          .upsert(syncRows, { onConflict: "sku" })
+          .select("id, sku, status"));
+      }
     }
 
     if (saveError) {

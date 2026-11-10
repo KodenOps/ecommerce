@@ -7,6 +7,7 @@ import {
   sendJson,
 } from "@/lib/apiHelpers";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { resolveCategory } from "@/api/categories";
 import { toAdminProduct, toStoreProduct } from "@/lib/productMapper";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
 import {
@@ -57,7 +58,29 @@ export default async function handler(req, res) {
     updates.title = title;
   }
   if (body.description !== undefined) updates.description = cleanMultiline(body.description, 900);
-  if (body.category !== undefined) updates.category = cleanText(body.category, 60) || "Skincare";
+  if (body.category !== undefined || body.categoryCode !== undefined) {
+    const wantedCode = cleanText(body.categoryCode, 40);
+    const wantedName = cleanText(body.category, 60);
+    const category = await resolveCategory(session.supabase, {
+      code: wantedCode,
+      name: wantedName,
+    });
+
+    if (wantedCode && !category) {
+      return sendJson(res, 400, {
+        error: "That category is not in the catalogue anymore. Pick another one.",
+      });
+    }
+
+    if (category) {
+      updates.category = category.name;
+      updates.category_code = category.code;
+    } else if (wantedName) {
+      // A category the catalogue does not know yet stays free text.
+      updates.category = wantedName;
+      updates.category_code = null;
+    }
+  }
   if (body.price !== undefined) {
     const price = readInt(body.price, 0);
     if (price <= 0) return sendJson(res, 400, { error: "Price must be greater than zero." });
@@ -120,16 +143,19 @@ export default async function handler(req, res) {
       .select("*")
       .maybeSingle();
 
-    // Older databases have no variant_title column yet; save everything else.
-    if (isMissingColumn(error, "variant_title")) {
-      const withoutTitle = { ...updates };
-      delete withoutTitle.variant_title;
-      ({ data, error } = await session.supabase
-        .from("products")
-        .update(withoutTitle)
-        .eq("id", id)
-        .select("*")
-        .maybeSingle());
+    // Older databases have no category_code or variant_title column yet; drop
+    // whichever column is missing and save everything else.
+    const payload = { ...updates };
+    for (const column of ["variant_title", "category_code"]) {
+      if (isMissingColumn(error, column)) {
+        delete payload[column];
+        ({ data, error } = await session.supabase
+          .from("products")
+          .update(payload)
+          .eq("id", id)
+          .select("*")
+          .maybeSingle());
+      }
     }
 
     if (error) return dbError(res, error, "We could not update that product.");

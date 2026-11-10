@@ -7,6 +7,7 @@ import {
   sendJson,
 } from "@/lib/apiHelpers";
 import { createServerSupabase, getSessionProfile } from "@/lib/supabase/server";
+import { resolveCategory } from "@/api/categories";
 import { toAdminProduct, toStoreProduct } from "@/lib/productMapper";
 import { cleanMultiline, cleanText, slugify } from "@/lib/validation";
 import {
@@ -70,6 +71,18 @@ export default async function handler(req, res) {
     "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=768&q=80";
 
   const suffix = Math.random().toString(36).slice(2, 6);
+  // The category is a reference to the catalogue; the display name is stored
+  // next to it so catalogue reads and order copy need no join.
+  const category = await resolveCategory(session.supabase, {
+    code: cleanText(body.categoryCode, 40),
+    name: cleanText(body.category, 60),
+  });
+  if (cleanText(body.categoryCode, 40) && !category) {
+    return sendJson(res, 400, {
+      error: "That category is not in the catalogue anymore. Pick another one.",
+    });
+  }
+
   const rawVariants = Array.isArray(body.variants)
     ? body.variants
     : Array.isArray(body.sizes)
@@ -81,7 +94,8 @@ export default async function handler(req, res) {
     slug: `${slugify(title) || "product"}-${suffix}`,
     sku: cleanText(body.sku, 40) || `QF-${suffix.toUpperCase()}${String(Date.now()).slice(-3)}`,
     description: cleanMultiline(body.description, 900) || "A QueenFizzie ritual.",
-    category: cleanText(body.category, 60) || "Skincare",
+    category: category?.name || cleanText(body.category, 60) || "Skincare",
+    category_code: category?.code || null,
     price,
     old_price: body.oldPrice ? readInt(body.oldPrice, 0) || null : null,
     image: primaryImage,
@@ -95,22 +109,20 @@ export default async function handler(req, res) {
 
   if (product.old_price && product.old_price <= product.price) product.old_price = null;
 
-  const productWithoutTitle = { ...product };
-  delete productWithoutTitle.variant_title;
-  let { data, error } = await session.supabase
-    .from("products")
-    .insert(product)
-    .select("*")
-    .single();
+  const insertProduct = (payload) =>
+    session.supabase.from("products").insert(payload).select("*").single();
 
-  // A database that has not run the latest schema.sql yet has no variant_title
-  // column; the product still saves and the heading falls back to "Options".
-  if (isMissingColumn(error, "variant_title")) {
-    ({ data, error } = await session.supabase
-      .from("products")
-      .insert(productWithoutTitle)
-      .select("*")
-      .single());
+  const newProduct = { ...product };
+  let { data, error } = await insertProduct(newProduct);
+
+  // A database that has not run the latest schema.sql yet has no category_code
+  // or variant_title column; drop whichever column it does not have and save
+  // the product anyway.
+  for (const column of ["variant_title", "category_code"]) {
+    if (isMissingColumn(error, column)) {
+      delete newProduct[column];
+      ({ data, error } = await insertProduct(newProduct));
+    }
   }
 
   if (error) return dbError(res, error, "We could not create that product.");
