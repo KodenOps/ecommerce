@@ -452,10 +452,8 @@ alter table public.favorites enable row level security;
 alter table public.promo_redemptions enable row level security;
 alter table public.categories enable row level security;
 
--- Categories: anon reads the catalogue, only admins write it. Explicit grants
--- keep the policies authoritative even on a database without default grants.
-grant select on public.categories to anon, authenticated;
-grant insert, update, delete on public.categories to authenticated;
+-- Every privilege this file relies on is granted in one place near the bottom
+-- ("least-privilege grants"), which is why nothing is granted here.
 
 -- profiles
 drop policy if exists profiles_select on public.profiles;
@@ -473,18 +471,21 @@ create policy profiles_admin_update on public.profiles
   for update to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
--- Role is never writable through the API: only these columns are granted,
--- and a trigger blocks role changes from any session that carries a user JWT.
-revoke update on public.profiles from anon, authenticated;
-grant update (first_name, last_name, phone, avatar_path, marketing_opt_in, updated_at)
-  on public.profiles to authenticated;
+-- Role is never writable through the API: the column grants further down only
+-- cover profile details, and a trigger blocks role changes from any API session.
 
 create or replace function public.guard_profile_role()
 returns trigger
 language plpgsql
+security invoker
+set search_path = public
 as $$
 begin
-  if new.role is distinct from old.role and auth.uid() is not null then
+  -- Second line of defence behind the column grants: no API key, signed in or
+  -- anonymous, may ever promote a profile. Only a direct database session
+  -- (the SQL editor, seed scripts) can change a role.
+  if new.role is distinct from old.role
+     and (auth.uid() is not null or current_user in ('anon', 'authenticated')) then
     raise exception 'ROLE_IMMUTABLE';
   end if;
   return new;
@@ -551,21 +552,29 @@ create policy categories_admin_write on public.categories
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
--- product variants: storefront reads all options, admins manage the variant list
+-- product variants: the storefront reads options of live products only, so a
+-- draft's pricing and stock stay private; admins see and manage every set.
 drop policy if exists product_variants_select on public.product_variants;
 create policy product_variants_select on public.product_variants
   for select to anon, authenticated
-  using (true);
+  using (
+    public.is_admin()
+    or exists (
+      select 1 from public.products p
+      where p.id = product_variants.product_id and p.status = 'ACTIVE'
+    )
+  );
 
 drop policy if exists product_variants_admin_write on public.product_variants;
 create policy product_variants_admin_write on public.product_variants
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
--- promos
+-- promos: codes are shown to signed-in customers; guests get no list, and
+-- checkout validates a single code through validate_promo().
 drop policy if exists promos_select on public.promos;
 create policy promos_select on public.promos
-  for select to anon, authenticated
+  for select to authenticated
   using (active = true or public.is_admin());
 
 drop policy if exists promos_admin_write on public.promos;
@@ -672,6 +681,58 @@ drop policy if exists promo_redemptions_select on public.promo_redemptions;
 create policy promo_redemptions_select on public.promo_redemptions
   for select to authenticated
   using (user_id = auth.uid() or public.is_admin());
+
+-- ----------------------------------------------- least-privilege grants ---
+-- Supabase hands anon and authenticated broad privileges on every new table in
+-- public by default - including TRUNCATE, which row level security does not
+-- police. Take all of it back and hand out only what each table's policies are
+-- written for, so a missing or wrong policy can never widen into access. A
+-- request that is not granted here fails before RLS is even consulted.
+revoke all on public.profiles           from public, anon, authenticated;
+revoke all on public.addresses          from public, anon, authenticated;
+revoke all on public.products           from public, anon, authenticated;
+revoke all on public.product_variants   from public, anon, authenticated;
+revoke all on public.categories         from public, anon, authenticated;
+revoke all on public.promos             from public, anon, authenticated;
+revoke all on public.orders             from public, anon, authenticated;
+revoke all on public.order_items        from public, anon, authenticated;
+revoke all on public.order_events       from public, anon, authenticated;
+revoke all on public.notifications      from public, anon, authenticated;
+revoke all on public.favorites          from public, anon, authenticated;
+revoke all on public.promo_redemptions  from public, anon, authenticated;
+revoke all on public.push_subscriptions from public, anon, authenticated;
+
+-- Storefront: readable by anyone, row-filtered by RLS; writes are admin-only
+-- through the is_admin() policies above.
+grant select on public.products, public.product_variants, public.categories
+  to anon, authenticated;
+grant insert, update, delete
+  on public.products, public.product_variants, public.categories
+  to authenticated;
+
+-- A customer's own records: RLS scopes every row to auth.uid().
+grant select on public.profiles to authenticated;
+-- Role, email, id and timestamps are deliberately absent: the API cannot write
+-- them, which is what stops a shopper promoting themselves to admin.
+grant update (first_name, last_name, phone, avatar_path, marketing_opt_in, push_opt_in, updated_at)
+  on public.profiles to authenticated;
+grant select, insert, update, delete on public.addresses to authenticated;
+grant select, insert, delete on public.favorites to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to authenticated;
+
+-- Promo codes live behind sign-in and are managed by admins.
+grant select, insert, update, delete on public.promos to authenticated;
+
+-- Orders are read-only to their owner. They are written exclusively by
+-- place_order() and admin_update_order(), which are security definer and
+-- re-price every line from the tables, so no client can forge an amount.
+grant select on public.orders, public.order_items, public.order_events
+  to authenticated;
+grant select on public.promo_redemptions to authenticated;
+
+-- Inbox: read your own and only flip read_at. Admins insert the alerts.
+grant select, insert on public.notifications to authenticated;
+grant update (read_at) on public.notifications to authenticated;
 
 -- --------------------------------------------------------- promo validation ---
 create or replace function public.validate_promo(p_code text, p_subtotal integer)
@@ -1201,6 +1262,41 @@ $$;
 
 grant execute on function public.category_demand(integer) to anon, authenticated;
 
+-- ------------------------------------------------------ function privileges ---
+-- PostgreSQL lets PUBLIC execute every new function, which would expose
+-- trigger-only helpers and admin RPCs to the API. Close that default, then
+-- hand back only the entry points the app actually calls.
+revoke execute on function public.touch_updated_at() from public, anon, authenticated;
+revoke execute on function public.sync_product_category_name() from public, anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.guard_profile_role() from public, anon, authenticated;
+
+revoke execute on function public.is_admin() from public;
+revoke execute on function public.phone_available(text) from public;
+revoke execute on function public.categories_public() from public;
+revoke execute on function public.validate_promo(text, integer) from public, anon;
+revoke execute on function public.place_order(jsonb, jsonb, text, jsonb) from public, anon;
+revoke execute on function public.admin_update_order(uuid, text, text, text, text, text) from public, anon;
+revoke execute on function public.admin_overview() from public, anon;
+revoke execute on function public.admin_finances() from public, anon;
+revoke execute on function public.category_demand(integer) from public;
+
+-- Policy predicates, so RLS can evaluate them for any caller.
+grant execute on function public.is_admin() to anon, authenticated;
+-- Sign-up needs both before a session exists.
+grant execute on function public.phone_available(text) to anon, authenticated;
+-- Public storefront helpers: catalogue list and aggregate demand.
+grant execute on function public.categories_public() to anon, authenticated;
+grant execute on function public.category_demand(integer) to anon, authenticated;
+-- Signed-in checkout and promo checks.
+grant execute on function public.validate_promo(text, integer) to authenticated;
+grant execute on function public.place_order(jsonb, jsonb, text, jsonb) to authenticated;
+-- Admin RPCs: granted to signed-in users but each one raises FORBIDDEN unless
+-- is_admin(), so the check lives inside the function, not just in the UI.
+grant execute on function public.admin_update_order(uuid, text, text, text, text, text) to authenticated;
+grant execute on function public.admin_overview() to authenticated;
+grant execute on function public.admin_finances() to authenticated;
+
 -- ------------------------------------------------------------------ storage ---
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -1278,13 +1374,13 @@ create policy receipts_owner_write on storage.objects
   for insert to authenticated
   with check (bucket_id = 'receipts' and (storage.foldername(name))[1] = auth.uid()::text);
 
+-- A receipt is payment evidence, so only an admin can remove one; the buyer who
+-- uploaded it cannot delete it after checkout.
 drop policy if exists receipts_owner_delete on storage.objects;
-create policy receipts_owner_delete on storage.objects
+drop policy if exists receipts_admin_delete on storage.objects;
+create policy receipts_admin_delete on storage.objects
   for delete to authenticated
-  using (
-    bucket_id = 'receipts'
-    and ((storage.foldername(name))[1] = auth.uid()::text or public.is_admin())
-  );
+  using (bucket_id = 'receipts' and public.is_admin());
 
 -- -------------------------------------------------------------------- done ---
 -- Next: run supabase/seed.sql, then supabase/README.md for the admin bootstrap.
