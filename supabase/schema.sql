@@ -202,12 +202,46 @@ alter table public.products add column if not exists images text[] not null defa
 -- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
 alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
 
-alter table public.categories add column if not exists code text not null default 'general';
-alter table public.categories add column if not exists name text not null default 'General';
+-- The category catalogue. Products point at a row here through category_code;
+-- the name also stays on the product, so storefront reads need no join.
+create table if not exists public.categories (
+  id         uuid primary key default gen_random_uuid(),
+  code       text not null unique,
+  name       text not null,
+  color      text not null default '#1a1a1a',
+  description text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- A database created before the catalogue had these columns gets them now.
+alter table public.categories add column if not exists code text;
+alter table public.categories add column if not exists name text;
 alter table public.categories add column if not exists color text not null default '#1a1a1a';
 alter table public.categories add column if not exists description text not null default '';
 alter table public.categories add column if not exists created_at timestamptz not null default now();
 alter table public.categories add column if not exists updated_at timestamptz not null default now();
+
+-- Every row needs a code, because products reference it and it is unique.
+update public.categories set name = 'Uncategorised' where name is null or trim(name) = '';
+update public.categories
+set code = trim(both '-' from regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g'))
+where code is null or trim(code) = '';
+update public.categories set code = 'category-' || left(id::text, 8) where trim(code) = '';
+
+-- Rows that shared the old default code keep the earliest one; the rest get a
+-- suffix so the unique index below can be created on an old database.
+update public.categories c
+set code = c.code || '-' || left(c.id::text, 4)
+where exists (
+  select 1 from public.categories other
+  where other.code = c.code and other.id < c.id
+);
+
+alter table public.categories alter column code set not null;
+alter table public.categories alter column code drop default;
+alter table public.categories alter column name set not null;
+create unique index if not exists categories_code_key on public.categories (code);
 
 
 -- The title of a product's option group ("Colour", "Size", "Flavour"...).
@@ -232,17 +266,8 @@ end $$;
 
 create index if not exists profiles_role_idx on public.profiles (role);
 create index if not exists addresses_user_idx on public.addresses (user_id);
-create index if not exists products_status_idx on public.products (status);create index if not exists products_category_idx on public.products (category);
-
-create table if not exists public.categories (
-  id         uuid primary key default gen_random_uuid(),
-  code       text not null unique,
-  name       text not null,
-  color      text not null default '#1a1a1a',
-  description text not null default '',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
+create index if not exists products_status_idx on public.products (status);
+create index if not exists products_category_idx on public.products (category);
 
 -- Products point at the category catalogue: category_code is the real
 -- reference, while category keeps the display name so existing reads (cards,
@@ -280,7 +305,10 @@ update public.products p
 set category_code = c.code
 from public.categories c
 where p.category_code is null
-  and lower(trim(p.category)) = lower(c.name);
+  and (
+    lower(trim(p.category)) = lower(c.name)
+    or trim(both '-' from regexp_replace(lower(trim(p.category)), '[^a-z0-9]+', '-', 'g')) = c.code
+  );
 
 do $$
 begin
@@ -422,6 +450,12 @@ alter table public.order_events enable row level security;
 alter table public.notifications enable row level security;
 alter table public.favorites enable row level security;
 alter table public.promo_redemptions enable row level security;
+alter table public.categories enable row level security;
+
+-- Categories: anon reads the catalogue, only admins write it. Explicit grants
+-- keep the policies authoritative even on a database without default grants.
+grant select on public.categories to anon, authenticated;
+grant insert, update, delete on public.categories to authenticated;
 
 -- profiles
 drop policy if exists profiles_select on public.profiles;
@@ -507,10 +541,12 @@ $$;
 grant execute on function public.categories_public() to anon, authenticated;
 
 -- Categories: admin management, public read-only list
+drop policy if exists categories_select on public.categories;
 create policy categories_select on public.categories
   for select to anon, authenticated
   using (true);
 
+drop policy if exists categories_admin_write on public.categories;
 create policy categories_admin_write on public.categories
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
