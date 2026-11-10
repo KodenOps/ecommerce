@@ -199,6 +199,11 @@ create table if not exists public.promo_redemptions (
 
 alter table public.products add column if not exists images text[] not null default '{}';
 
+-- The push toggle arrived after the first profiles table was created, so a live
+-- database is missing it: create table if not exists does not add columns to an
+-- existing table, and the profile route writes this one.
+alter table public.profiles add column if not exists push_opt_in boolean not null default false;
+
 -- Extra attributes per product option (e.g. flavour = mint, amount = 4000).
 alter table public.product_variants add column if not exists meta jsonb not null default '[]'::jsonb;
 
