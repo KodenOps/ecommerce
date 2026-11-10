@@ -59,7 +59,7 @@ const REPO_STORAGE_KEY = "queenfizzie-product-repo-edits";
 const EMPTY = {
   title: "",
   sku: "",
-  category: "Skincare",
+  category: "",
   categoryCode: "",
   price: "",
   oldPrice: "",
@@ -242,13 +242,29 @@ export default function AdminProducts() {
     [categories, categoryCounts]
   );
 
-  // The category picker offers the built-in categories plus anything the admin
-  // created in /Admin/Categories, and keeps the saved value selectable.
+  // The picker offers only the /Admin/Categories catalogue, so a product can
+  // never be saved under a category the catalogue does not have. A product
+  // saved before the catalogue existed keeps its old text as a selectable-once
+  // placeholder so opening the form never silently reassigns it.
   const categorySelectOptions = useMemo(() => {
-    const names = new Set([...FIXED_CATEGORIES, ...categories.map((item) => item.name)]);
-    if (form.category) names.add(form.category);
-    return [...names];
+    const options = categories.map((item) => ({
+      code: item.code,
+      name: item.name,
+      legacy: false,
+    }));
+    const wanted = String(form.category || "").trim().toLowerCase();
+    const known = options.some(
+      (item) => item.name.trim().toLowerCase() === wanted
+    );
+    if (!form.category && options.length) {
+      options.unshift({ code: "", name: "", legacy: true, placeholder: true });
+    } else if (form.category && !known) {
+      options.unshift({ code: "", name: form.category, legacy: true });
+    }
+    return options;
   }, [categories, form.category]);
+
+  const catalogueDefaultCategory = () => categories[0]?.name || "";
 
   // Products store the catalogue code; the picker works with names, so look the
   // code up whenever a name is chosen.
@@ -316,13 +332,13 @@ export default function AdminProducts() {
 
   const openNewProductModal = () => {
     setEditingId(null);
-    setForm(EMPTY);
+    setForm({ ...EMPTY, category: catalogueDefaultCategory() });
     setIsModalOpen(true);
   };
 
   const reset = () => {
     setEditingId(null);
-    setForm(EMPTY);
+    setForm({ ...EMPTY, category: catalogueDefaultCategory() });
     setIsModalOpen(false);
   };
 
@@ -715,8 +731,23 @@ export default function AdminProducts() {
                         }
                         className="field mt-1.5 cursor-pointer"
                       >
-                        {categorySelectOptions.map((category) => (
-                          <option key={category} value={category}>{category}</option>
+                        {categorySelectOptions.length === 0 && (
+                          <option value={form.category} disabled>
+                            No categories yet — add one under Categories
+                          </option>
+                        )}
+                        {categorySelectOptions.map((option) => (
+                          <option
+                            key={option.code || option.name}
+                            value={option.name}
+                            disabled={option.legacy}
+                          >
+                            {option.placeholder
+                              ? "Select a category"
+                              : option.legacy
+                                ? `${option.name} (not in catalogue)`
+                                : option.name}
+                          </option>
                         ))}
                       </select>
                     </div>

@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     slug: `${slugify(title) || "product"}-${suffix}`,
     sku: cleanText(body.sku, 40) || `QF-${suffix.toUpperCase()}${String(Date.now()).slice(-3)}`,
     description: cleanMultiline(body.description, 900) || "A QueenFizzie ritual.",
-    category: category?.name || cleanText(body.category, 60) || "Skincare",
+    category: category?.name || cleanText(body.category, 60) || "Uncategorised",
     category_code: category?.code || null,
     price,
     old_price: body.oldPrice ? readInt(body.oldPrice, 0) || null : null,
