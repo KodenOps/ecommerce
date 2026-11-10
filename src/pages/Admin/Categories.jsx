@@ -139,7 +139,6 @@ export default function AdminCategories() {
         setCategories((current) =>
           current.map((item) => (item.code === saved.code ? saved : item))
         );
-        setSelected(null);
         setDraft(saved);
       } else {
         setCategories((current) => {
@@ -152,7 +151,6 @@ export default function AdminCategories() {
           return [...current, saved];
         });
         setEditing(saved);
-        setSelected(saved);
       }
       setState((current) => ({ ...current, saving: false, ok: "Category saved." }));
     } catch (failure) {
@@ -225,7 +223,7 @@ export default function AdminCategories() {
                 placeholder="Filter by name, code or description"
                 value={filterDraft}
                 onChange={(event) => setFilterDraft(event.target.value)}
-                className="input"
+                className="field w-full"
                 aria-label="Filter categories"
               />
             </div>
@@ -299,7 +297,7 @@ export default function AdminCategories() {
 
           <div className="space-y-4 p-4">
             <div>
-              <label className="form-label" htmlFor="category-code">
+              <label className="label" htmlFor="category-code">
                 Code
               </label>
               <input
@@ -310,7 +308,7 @@ export default function AdminCategories() {
                   setDraft((current) => ({ ...current, code: event.target.value }))
                 }
                 maxLength={40}
-                className="input"
+                className="field mt-1.5"
                 placeholder="e.g. skincare"
               />
               <p className="mt-1 text-[11px] text-muted">
@@ -319,7 +317,7 @@ export default function AdminCategories() {
             </div>
 
             <div>
-              <label className="form-label" htmlFor="category-name">
+              <label className="label" htmlFor="category-name">
                 Name
               </label>
               <input
@@ -330,13 +328,13 @@ export default function AdminCategories() {
                   setDraft((current) => ({ ...current, name: event.target.value }))
                 }
                 maxLength={80}
-                className="input"
+                className="field mt-1.5"
                 placeholder="e.g. Skincare"
               />
             </div>
 
             <div>
-              <label className="form-label" htmlFor="category-color">
+              <label className="label" htmlFor="category-color">
                 Colour
               </label>
               <div className="flex items-center gap-3">
@@ -350,7 +348,7 @@ export default function AdminCategories() {
                       color: event.target.value,
                     }))
                   }
-                  className="flex h-10 w-10 shrink-0 rounded-lg border border-line bg-transparent"
+                  className="h-11 w-11 shrink-0 cursor-pointer rounded-full border border-line bg-transparent p-0"
                 />
                 <input
                   type="text"
@@ -359,14 +357,14 @@ export default function AdminCategories() {
                     setDraft((current) => ({ ...current, color: event.target.value }))
                   }
                   maxLength={20}
-                  className="input font-mono"
+                  className="field font-mono"
                   placeholder="#1a1a1a"
                 />
               </div>
             </div>
 
             <div>
-              <label className="form-label" htmlFor="category-description">
+              <label className="label" htmlFor="category-description">
                 Description
               </label>
               <textarea
@@ -376,7 +374,7 @@ export default function AdminCategories() {
                   setDraft((current) => ({ ...current, description: event.target.value }))
                 }
                 maxLength={500}
-                className="input min-h-[96px] resize-y"
+                className="field mt-1.5 min-h-[96px] resize-y"
                 placeholder="How this category is used, for example in filters and browse pages."
               />
             </div>
