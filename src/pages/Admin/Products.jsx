@@ -586,15 +586,20 @@ export default function AdminProducts() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{product.title}</p>
                 <p className="text-[11px] text-muted">
-                  {product.category} · {product.sku} · {product.status.toLowerCase()}
+                  {product.category} · {product.sku} 
                 </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-ink">{formatNaira(product.price)}</p>
+                   <p className="text-sm font-semibold text-ink">{formatNaira(product.price)}</p>
                 {product.oldprice && (
                   <p className="text-[10px] text-muted line-through">{formatNaira(product.oldprice)}</p>
                 )}
               </div>
+              {/* <div className="text-right">
+                <p className="text-sm font-semibold text-ink">{formatNaira(product.price)}</p>
+                {product.oldprice && (
+                  <p className="text-[10px] text-muted line-through">{formatNaira(product.oldprice)}</p>
+                )}
+              </div> */}
+              <div className="flex flex-col gap-6">
               <div className="flex items-center gap-1 rounded-full border border-line bg-surface-2 px-1.5 py-1">
                 <button
                   type="button"
@@ -620,7 +625,7 @@ export default function AdminProducts() {
                   +
                 </button>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex justify-between items-center gap-1">
                 <button type="button" onClick={() => startEdit(product)} className="btn-icon h-8 w-8" aria-label={`Edit ${product.title}`}>
                   <FiEdit3 size={13} />
                 </button>
@@ -632,6 +637,7 @@ export default function AdminProducts() {
                 >
                   <FiArchive size={13} />
                 </button>
+                </div>
               </div>
             </div>
           ))}
