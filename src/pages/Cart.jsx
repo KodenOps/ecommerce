@@ -101,7 +101,7 @@ const Cart = () => {
 
               <ul className="divide-y divide-line">
                 {cartItems.map((item) => (
-                  <li key={item.id} className="flex flex-col gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
+                  <li key={item.id} className="flex gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
                     <Link
                       href={`/ProductPreview?id=${item.id}`}
                       className="relative shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-16 sm:w-16"
@@ -112,7 +112,7 @@ const Cart = () => {
                         src={item.image}
                         alt={item.title}
                         fill
-                        sizes="(max-width: 640px) 100vw, 64px"
+                        sizes="(max-width: 640px) 100vw, 40px"
                         className="object-cover"
                       />
                     </Link>
@@ -134,18 +134,8 @@ const Cart = () => {
                               {item.selectedVariantDetail}
                             </p>
                           )}
-                        </div>
-                        <div className="min-w-0 shrink-0 mt-auto sm:inline-flex sm:mt-0 sm:gap-3">
-                          <button
-                            type="button"
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-muted transition-colors hover:text-accent"
-                            aria-label={`Remove ${item.title}`}
-                          >
-                            <FiTrash2 size={15} />
-                          </button>
-                          <div className="text-right sm:ml-auto">
-                            <p className="text-sm font-semibold text-ink">
+                          {/* price */}
+                          <p className="text-sm font-semibold text-ink mt-4">
                               {formatNaira(item.price * item.qty)}
                             </p>
                             {item.oldprice && (
@@ -153,10 +143,10 @@ const Cart = () => {
                                 {formatNaira(item.oldprice * item.qty)}
                               </p>
                             )}
-                          </div>
                         </div>
+                        
                       </div>
-
+                      <div className="flex w-full items-center justify-start gap-4 sm:justify-between h-full mt-4">
                       <div className="mt-1 flex items-center gap-1.5 border border-line rounded-full bg-surface-2 p-1 self-start sm:self-auto sm:ml-auto sm:justify-self-end">
                         <button
                           type="button"
@@ -177,6 +167,19 @@ const Cart = () => {
                         >
                           <FiPlus size={12} />
                         </button>
+                      
+                      </div>
+                      <div className="removeBtn">
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.id)}
+                            className="text-muted transition-colors hover:text-accent"
+                            aria-label={`Remove ${item.title}`}
+                          >
+                            <FiTrash2 size={15} />
+                          </button>
+                          
+                      </div>
                       </div>
                     </div>
                   </li>

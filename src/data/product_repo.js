@@ -6582,7 +6582,6 @@ let product_repo = [
       ]
     }
   ]
-}
-]
+}];
 
 export default product_repo;

@@ -121,14 +121,14 @@ const ProductCard = ({ product, compact = false }) => {
             {product.title}
           </Link>
 
-          {!compact && (
+          {/* {!compact && (
             <p className="line-clamp-2 text-xs leading-relaxed text-ink-soft">
               {product.description}
             </p>
-          )}
+          )} */}
 
           <div className="mt-auto flex items-end justify-between pt-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex flex-col items-baseline gap-2">
               <span className="text-lg font-semibold text-ink">{formatNaira(selectedPrice)}</span>
               {hasSaving && (
                 <span className="text-xs text-muted line-through">{formatNaira(compareAt)}</span>
