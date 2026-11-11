@@ -99,12 +99,12 @@ const Cart = () => {
                 )}
               </div>
 
-              <ul className="divide-y divide-line">
+              <ul className="divide-y divide-line ">
                 {cartItems.map((item) => (
-                  <li key={item.key} className="flex gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
+                  <li key={item.key} className="flex gap-4 p-4 sm:flex-row sm:items-start sm:gap-4 relative">
                     <Link
                       href={`/ProductPreview?id=${item.id}`}
-                      className="relative shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-16 sm:w-16"
+                      className="relative shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-16 sm:w-16 "
                       aria-label={item.title}
                       style={{ aspectRatio: "1 / 1", height: "auto", width: "100%", maxWidth: "160px" }}
                     >
@@ -146,7 +146,7 @@ const Cart = () => {
                         </div>
                         
                       </div>
-                      <div className="flex w-full items-center justify-start gap-4 sm:justify-between h-full mt-4">
+                      <div className="flex w-full items-center justify-start gap-4 sm:justify-between h-full mt-4 ">
                       <div className="mt-1 flex items-center gap-1.5 border border-line rounded-full bg-surface-2 p-1 self-start sm:self-auto sm:ml-auto sm:justify-self-end">
                         <button
                           type="button"
@@ -169,11 +169,11 @@ const Cart = () => {
                         </button>
                       
                       </div>
-                      <div className="removeBtn">
+                      <div className="removeBtn absolute left-4 top-4 sm:static sm:ml-auto sm:self-start rounded-full sm:rounded-none sm:bg-transparent sm:p-0 bg-surface-2 p-1 transition-colors hover:bg-surface h-8 w-8 sm:h-auto sm:w-auto flex items-center justify-center">
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.id, item.variant)}
-                            className="text-muted transition-colors hover:text-accent"
+                            className="text-red-400 transition-colors hover:text-accent"
                             aria-label={`Remove ${item.title}`}
                           >
                             <FiTrash2 size={15} />
