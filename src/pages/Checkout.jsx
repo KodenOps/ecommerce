@@ -640,10 +640,10 @@ export default function Checkout() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-[11px] text-ink-soft">
+                {/* <div className="flex items-center gap-2 rounded-2xl border border-line bg-surface-2 px-4 py-3 text-[11px] text-ink-soft">
                   <FiLock size={13} className="text-accent" />
                   Your receipt is stored privately in Supabase and only admins can open it.
-                </div>
+                </div> */}
 
                 <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <button

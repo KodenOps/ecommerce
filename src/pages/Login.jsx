@@ -129,13 +129,13 @@ export default function Login() {
 
         <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface-2/60 p-4 text-[11px] leading-relaxed text-ink-soft">
           <FiShield className="mt-0.5 shrink-0 text-accent" size={14} />
-          <span>
+          {/* <span>
             Accounts are protected by Supabase Auth. A phone number is required at
             registration so our courier can reach you.{" "}
             <Link href="/Admin/Login" className="font-semibold text-accent hover:opacity-70">
               Store owner? Admin sign-in.
             </Link>
-          </span>
+          </span> */}
         </div>
       </div>
     </Layout>
