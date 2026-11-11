@@ -187,7 +187,7 @@ const Cart = () => {
               </ul>
             </div>
 
-            <aside className="card hidden sm:block sm:sticky sm:top-24 lg:max-w-[360px]">
+            <aside className="card p-6 sm:block sm:sticky sm:top-24 ">
               <div className="flex items-center justify-between border-b border-b-surface-2 pb-3">
                 <h2 className="font-display text-base text-ink">Order summary</h2>
                 <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-ink-soft">
