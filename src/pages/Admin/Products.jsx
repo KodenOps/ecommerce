@@ -509,16 +509,17 @@ export default function AdminProducts() {
       title="Products & stock"
       description="Add new drops, adjust prices, restock shelves and archive what is finished."
       actions={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full">
           <button type="button" onClick={openNewProductModal} className="btn-primary">
             <FiPlus size={14} /> New product
           </button>
-          <button type="button" onClick={load} className="btn-secondary">
-            <FiRefreshCw size={14} className={state.loading ? "animate-spin" : ""} /> Refresh
-          </button>
+          
           <button type="button" onClick={openCategorySheet} className="btn-secondary">
             Manage categories
             <FiChevronRight size={12} className="-ml-0.5" />
+          </button>
+           <button type="button" onClick={load} className="btn-secondary">
+            <FiRefreshCw size={14} className={state.loading ? "animate-spin" : ""} /> Refresh
           </button>
         </div>
       }
