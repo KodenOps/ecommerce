@@ -257,8 +257,14 @@ export function StoreProvider({ children }) {
       }
 
       const product = catalog.find((item) => String(item.id) === String(productId));
-      const variantStock = variant?.stock ?? product?.stock ?? 20;
-      const cap = product?.stock ? Math.min(20, variantStock) : 20;
+      // The caller may hand us the display copy of the variant (value/label/meta)
+      // or the catalogue row itself; read the stock from the catalogue, so a line
+      // is capped by its own option rather than by whichever one came first.
+      const catalogueVariant = variant
+        ? product?.sizes?.find((size) => String(size.value) === String(variant.value)) || null
+        : null;
+      const stock = Number(variant?.stock ?? catalogueVariant?.stock ?? product?.stock ?? 20);
+      const cap = Math.max(1, Math.min(20, Number.isFinite(stock) ? stock : 20));
 
       return current.map((line) => {
         const matchesTarget = key ? line.key === key : String(line.id) === String(productId);

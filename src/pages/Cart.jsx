@@ -101,7 +101,7 @@ const Cart = () => {
 
               <ul className="divide-y divide-line">
                 {cartItems.map((item) => (
-                  <li key={item.id} className="flex gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
+                  <li key={item.key} className="flex gap-4 p-4 sm:flex-row sm:items-start sm:gap-4">
                     <Link
                       href={`/ProductPreview?id=${item.id}`}
                       className="relative shrink-0 overflow-hidden rounded-2xl border border-line bg-surface-2 sm:h-16 sm:w-16"
@@ -150,7 +150,7 @@ const Cart = () => {
                       <div className="mt-1 flex items-center gap-1.5 border border-line rounded-full bg-surface-2 p-1 self-start sm:self-auto sm:ml-auto sm:justify-self-end">
                         <button
                           type="button"
-                          onClick={() => setQuantity(item.id, item.qty - 1)}
+                          onClick={() => setQuantity(item.id, item.qty - 1, item.variant)}
                           className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
                           aria-label="Decrease quantity"
                         >
@@ -161,7 +161,7 @@ const Cart = () => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setQuantity(item.id, item.qty + 1)}
+                          onClick={() => setQuantity(item.id, item.qty + 1, item.variant)}
                           className="flex h-7 w-7 items-center justify-center rounded-full text-ink-soft transition-colors hover:bg-surface hover:text-accent"
                           aria-label="Increase quantity"
                         >
@@ -172,7 +172,7 @@ const Cart = () => {
                       <div className="removeBtn">
                           <button
                             type="button"
-                            onClick={() => removeFromCart(item.id)}
+                            onClick={() => removeFromCart(item.id, item.variant)}
                             className="text-muted transition-colors hover:text-accent"
                             aria-label={`Remove ${item.title}`}
                           >
