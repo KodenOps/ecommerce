@@ -169,10 +169,10 @@ const Cart = () => {
                         </button>
                       
                       </div>
-                      <div className="removeBtn absolute left-4 top-4 sm:static sm:ml-auto sm:self-start rounded-full sm:rounded-none sm:bg-transparent sm:p-0 bg-surface-2 p-1 transition-colors hover:bg-surface h-8 w-8 sm:h-auto sm:w-auto flex items-center justify-center">
+                      <div className="removeBtn absolute left-4 top-4 sm:static sm:ml-auto sm:self-start rounded-full sm:rounded-none sm:bg-transparent sm:p-0 bg-surface-2 p-1 transition-colors hover:bg-surface h-8 w-8 sm:h-auto sm:w-auto flex items-center justify-center" onClick={() => removeFromCart(item.id, item.variant)}>
                           <button
                             type="button"
-                            onClick={() => removeFromCart(item.id, item.variant)}
+                            
                             className="text-red-400 transition-colors hover:text-accent"
                             aria-label={`Remove ${item.title}`}
                           >
